@@ -3,8 +3,14 @@
 DT_TENANT_ID=$1
 DT_PAAS_TOKEN=$2
 
-kubectl apply -f ../manifests/istio/istio-crds.yml
-kubectl apply -f ../manifests/istio/istio-demo.yml
+kubectl apply -f ../manifests/istio/crd-10.yaml
+kubectl apply -f ../manifests/istio/crd-11.yaml
+kubectl apply -f ../manifests/istio/crd-certmanager-10.yaml
+kubectl apply -f ../manifests/istio/crd-certmanager-11.yaml
+
+sleep 30
+
+kubectl apply -f ../manifests/istio/istio-demo.yaml
 
 echo "wait a couple of minutes for changes to apply... "
 sleep 250
@@ -19,7 +25,7 @@ kubectl create -f ../repositories/k8s-deploy-production/istio/gateway.yml
 kubectl create -f ../repositories/k8s-deploy-production/istio/destination_rule.yml
 kubectl create -f ../repositories/k8s-deploy-production/istio/virtual_service.yml
 
-./createServiceEntry.sh $DT_TENANT_ID $DT_PAAS_TOKEN
+# ./createServiceEntry.sh $DT_TENANT_ID $DT_PAAS_TOKEN
 
 sleep 10
 

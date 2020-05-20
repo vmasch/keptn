@@ -10,13 +10,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/go-openapi/errors"
-	"github.com/go-openapi/loads"
-	"github.com/go-openapi/runtime"
-	"github.com/go-openapi/runtime/middleware"
-	"github.com/go-openapi/runtime/security"
-	"github.com/go-openapi/spec"
-	"github.com/go-openapi/strfmt"
+	errors "github.com/go-openapi/errors"
+	loads "github.com/go-openapi/loads"
+	runtime "github.com/go-openapi/runtime"
+	middleware "github.com/go-openapi/runtime/middleware"
+	security "github.com/go-openapi/runtime/security"
+	spec "github.com/go-openapi/spec"
+	strfmt "github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 
 	"github.com/keptn/keptn/mongodb-datastore/restapi/operations/event"
@@ -31,7 +31,6 @@ func NewMongodbDatastoreAPI(spec *loads.Document) *MongodbDatastoreAPI {
 		defaultProduces:     "application/json",
 		customConsumers:     make(map[string]runtime.Consumer),
 		customProducers:     make(map[string]runtime.Producer),
-		PreServerShutdown:   func() {},
 		ServerShutdown:      func() {},
 		spec:                spec,
 		ServeError:          errors.ServeError,
@@ -42,6 +41,9 @@ func NewMongodbDatastoreAPI(spec *loads.Document) *MongodbDatastoreAPI {
 		JSONProducer:        runtime.JSONProducer(),
 		EventGetEventsHandler: event.GetEventsHandlerFunc(func(params event.GetEventsParams) middleware.Responder {
 			return middleware.NotImplemented("operation event.GetEvents has not yet been implemented")
+		}),
+		EventGetOpenEventsHandler: event.GetOpenEventsHandlerFunc(func(params event.GetOpenEventsParams) middleware.Responder {
+			return middleware.NotImplemented("operation EventGetOpenEvents has not yet been implemented")
 		}),
 		EventSaveEventHandler: event.SaveEventHandlerFunc(func(params event.SaveEventParams) middleware.Responder {
 			return middleware.NotImplemented("operation event.SaveEvent has not yet been implemented")
@@ -81,15 +83,14 @@ type MongodbDatastoreAPI struct {
 
 	// EventGetEventsHandler sets the operation handler for the get events operation
 	EventGetEventsHandler event.GetEventsHandler
+	// EventGetOpenEventsHandler sets the operation handler for the get open events operation
+	EventGetOpenEventsHandler event.GetOpenEventsHandler
 	// EventSaveEventHandler sets the operation handler for the save event operation
 	EventSaveEventHandler event.SaveEventHandler
+
 	// ServeError is called when an error is received, there is a default handler
 	// but you can set your own with this
 	ServeError func(http.ResponseWriter, *http.Request, error)
-
-	// PreServerShutdown is called before the HTTP(S) server is shutdown
-	// This allows for custom functions to get executed before the HTTP(S) server stops accepting traffic
-	PreServerShutdown func()
 
 	// ServerShutdown is called when the HTTP(S) server is shut down and done
 	// handling all active connections and does not accept connections any more
@@ -150,11 +151,15 @@ func (o *MongodbDatastoreAPI) Validate() error {
 	}
 
 	if o.EventGetEventsHandler == nil {
-		unregistered = append(unregistered, "Event.GetEventsHandler")
+		unregistered = append(unregistered, "event.GetEventsHandler")
+	}
+
+	if o.EventGetOpenEventsHandler == nil {
+		unregistered = append(unregistered, "event.GetOpenEventsHandler")
 	}
 
 	if o.EventSaveEventHandler == nil {
-		unregistered = append(unregistered, "Event.SaveEventHandler")
+		unregistered = append(unregistered, "event.SaveEventHandler")
 	}
 
 	if len(unregistered) > 0 {
@@ -183,16 +188,19 @@ func (o *MongodbDatastoreAPI) Authorizer() runtime.Authorizer {
 
 }
 
-// ConsumersFor gets the consumers for the specified media types.
-// MIME type parameters are ignored here.
+// ConsumersFor gets the consumers for the specified media types
 func (o *MongodbDatastoreAPI) ConsumersFor(mediaTypes []string) map[string]runtime.Consumer {
-	result := make(map[string]runtime.Consumer, len(mediaTypes))
+
+	result := make(map[string]runtime.Consumer)
 	for _, mt := range mediaTypes {
 		switch mt {
+
 		case "application/cloudevents+json":
 			result["application/cloudevents+json"] = o.JSONConsumer
+
 		case "application/json":
 			result["application/json"] = o.JSONConsumer
+
 		}
 
 		if c, ok := o.customConsumers[mt]; ok {
@@ -202,10 +210,9 @@ func (o *MongodbDatastoreAPI) ConsumersFor(mediaTypes []string) map[string]runti
 	return result
 }
 
-// ProducersFor gets the producers for the specified media types.
-// MIME type parameters are ignored here.
+// ProducersFor gets the producers for the specified media types
 func (o *MongodbDatastoreAPI) ProducersFor(mediaTypes []string) map[string]runtime.Producer {
-	result := make(map[string]runtime.Producer, len(mediaTypes))
+	result := make(map[string]runtime.Producer)
 	for _, mt := range mediaTypes {
 		switch mt {
 		case "application/cloudevents+json":
@@ -257,6 +264,11 @@ func (o *MongodbDatastoreAPI) initHandlerCache() {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
 	o.handlers["GET"]["/event"] = event.NewGetEvents(o.context, o.EventGetEventsHandler)
+
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/event/open"] = event.NewGetOpenEvents(o.context, o.EventGetOpenEventsHandler)
 
 	if o.handlers["POST"] == nil {
 		o.handlers["POST"] = make(map[string]http.Handler)

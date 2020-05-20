@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -77,6 +78,26 @@ func ProcessEvent(event *models.KeptnContextExtendedCE) error {
 
 	if event.Type == keptnutils.InternalProjectDeleteEventType {
 		return dropProjectEvents(logger, event)
+	}
+	if strings.HasSuffix(string(event.Type), "triggered") {
+		if err := handleTriggeredEvent(logger, event); err != nil {
+			logger.Error(err.Error())
+		}
+	} else if event.Type == keptnutils.TestsFinishedEventType {
+		// TODO: Rework conversion of KeptnContextExtendedCE into TestsFinishedEventData
+		data, err := json.Marshal(event.Data)
+		if err != nil {
+			logger.Error(err.Error())
+		} else {
+			testFinishedData := keptnutils.TestsFinishedEventData{}
+			if err := json.Unmarshal(data, &testFinishedData); err != nil {
+				logger.Error(err.Error())
+			} else {
+				if err := deleteTriggeredEvent(testFinishedData.Test.TriggeredID); err != nil {
+					logger.Error(err.Error())
+				}
+			}
+		}
 	}
 	return insertEvent(logger, event)
 }

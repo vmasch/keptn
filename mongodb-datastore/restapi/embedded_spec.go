@@ -167,6 +167,64 @@ func init() {
           }
         }
       }
+    },
+    "/event/open": {
+      "get": {
+        "tags": [
+          "event"
+        ],
+        "summary": "Gets all open triggered events",
+        "operationId": "getOpenEvents",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Type of the keptn cloud event",
+            "name": "type",
+            "in": "query",
+            "required": true
+          },
+          {
+            "$ref": "#/parameters/pagesizeParam"
+          },
+          {
+            "$ref": "#/parameters/pageParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "events": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/KeptnContextExtendedCE"
+                  }
+                },
+                "nextPageKey": {
+                  "description": "Pointer to the next page",
+                  "type": "string"
+                },
+                "pageSize": {
+                  "description": "Size of the returned page",
+                  "type": "integer"
+                },
+                "totalCount": {
+                  "description": "Total number of events",
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -375,6 +433,73 @@ func init() {
         "responses": {
           "201": {
             "description": "created"
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/event/open": {
+      "get": {
+        "tags": [
+          "event"
+        ],
+        "summary": "Gets all open triggered events",
+        "operationId": "getOpenEvents",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Type of the keptn cloud event",
+            "name": "type",
+            "in": "query",
+            "required": true
+          },
+          {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer",
+            "default": 20,
+            "description": "Page size to be returned",
+            "name": "pageSize",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Key of the page to be returned",
+            "name": "nextPageKey",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "events": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/KeptnContextExtendedCE"
+                  }
+                },
+                "nextPageKey": {
+                  "description": "Pointer to the next page",
+                  "type": "string"
+                },
+                "pageSize": {
+                  "description": "Size of the returned page",
+                  "type": "integer"
+                },
+                "totalCount": {
+                  "description": "Total number of events",
+                  "type": "integer"
+                }
+              }
+            }
           },
           "default": {
             "description": "error",

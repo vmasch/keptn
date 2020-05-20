@@ -19,7 +19,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 
-	"github.com/keptn/go-utils/pkg/lib"
+	keptn "github.com/keptn/go-utils/pkg/lib"
 )
 
 const eventbroker = "EVENTBROKER"
@@ -219,6 +219,7 @@ func sendTestsFinishedEvent(keptnHandler *keptn.Keptn, incomingEvent cloudevents
 	testFinishedData.End = time.Now().Format(time.RFC3339)
 	// set test result
 	testFinishedData.Result = result
+	testFinishedData.Test = keptn.TestData{TriggeredID: incomingEvent.ID()}
 
 	event := cloudevents.Event{
 		Context: cloudevents.EventContextV02{

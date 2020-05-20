@@ -21,6 +21,11 @@ spec:
         env:
         - name: EVENTBROKER
           value: 'http://event-broker.keptn.svc.cluster.local/keptn'
+        - name: SECRET_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: keptn-api-token
+              key: keptn-api-token
 ---
 apiVersion: v1
 kind: Service

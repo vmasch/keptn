@@ -46,6 +46,8 @@ definitions:
         source:
           format: uri-reference
           type: string
+        triggerid:
+          type: string
       required:
         - data
         - source

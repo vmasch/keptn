@@ -60,12 +60,12 @@ func PostEventHandlerFunc(params event.PostEventParams, principal *models.Princi
 
 	ev := cloudevents.Event{
 		Context: cloudevents.EventContextV02{
-			ID:          uuid.New().String(),
+			ID:          params.Body.ID,
 			Time:        &types.Timestamp{Time: time.Now()},
 			Type:        *params.Body.Type,
 			Source:      types.URLRef{URL: *source},
 			ContentType: &contentType,
-			Extensions:  map[string]interface{}{"shkeptncontext": keptnContext},
+			Extensions:  map[string]interface{}{"shkeptncontext": keptnContext, "triggerid": params.Body.Triggerid},
 		}.AsV02(),
 		Data: forwardData,
 	}

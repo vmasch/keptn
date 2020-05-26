@@ -35,13 +35,13 @@ func main() {
 func getKeptnDomain() (string, error) {
 	if os.Getenv("KEPTN_DOMAIN") != "" {
 		return os.Getenv("KEPTN_DOMAIN"), nil
- 	}
+	}
 
- 	useInClusterConfig := false
- 	if os.Getenv("ENVIRONMENT") == "production" {
- 		useInClusterConfig = true
- 	}
- 	return keptnutils.GetKeptnDomain(useInClusterConfig)
+	useInClusterConfig := false
+	if os.Getenv("ENVIRONMENT") == "production" {
+		useInClusterConfig = true
+	}
+	return keptnutils.GetKeptnDomain(useInClusterConfig)
 
 }
 

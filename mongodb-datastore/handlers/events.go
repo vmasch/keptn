@@ -93,7 +93,7 @@ func ProcessEvent(event *models.KeptnContextExtendedCE) error {
 			if err := json.Unmarshal(data, &testFinishedData); err != nil {
 				logger.Error(err.Error())
 			} else {
-				if err := deleteTriggeredEvent(testFinishedData.Test.TriggeredID); err != nil {
+				if err := deleteTriggeredEvent(event.Triggerid); err != nil {
 					logger.Error(err.Error())
 				}
 			}

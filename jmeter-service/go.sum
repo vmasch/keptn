@@ -154,6 +154,12 @@ github.com/keptn/go-utils v0.6.1-compat.0.20200406125548-5337a2e806c4 h1:D6m0Bxm
 github.com/keptn/go-utils v0.6.1-compat.0.20200406125548-5337a2e806c4/go.mod h1:aDNFm3olvCZd7AE6/Xyir4g5Mw6E89mjhKt0zoJHC6g=
 github.com/keptn/go-utils v0.6.3-0.20200520092033-0c2b5c8b58dd h1:wruIwM5M09D0VVkuglsDOFaI24gNQiK/hQeBrF+aPuc=
 github.com/keptn/go-utils v0.6.3-0.20200520092033-0c2b5c8b58dd/go.mod h1:aDNFm3olvCZd7AE6/Xyir4g5Mw6E89mjhKt0zoJHC6g=
+github.com/keptn/go-utils v0.6.3-0.20200525132055-75f9d8a9678a h1:+zE/4YxsrhH8Tb0T1p/XLzUPu2gAAOvdYkSFQl/WovA=
+github.com/keptn/go-utils v0.6.3-0.20200525132055-75f9d8a9678a/go.mod h1:aDNFm3olvCZd7AE6/Xyir4g5Mw6E89mjhKt0zoJHC6g=
+github.com/keptn/go-utils v0.6.3-0.20200525133648-66cb9eae3c83 h1:q10F4gw1/CLoaUOFhGW8OYRC4MVTPll7hnNp4O612+U=
+github.com/keptn/go-utils v0.6.3-0.20200525133648-66cb9eae3c83/go.mod h1:aDNFm3olvCZd7AE6/Xyir4g5Mw6E89mjhKt0zoJHC6g=
+github.com/keptn/go-utils v0.6.3-0.20200526105520-9ecd1bc80151 h1:9Div//JaIuJ/x51c4WGhTVI3Zuy6IPT7wtLAOEy1/T4=
+github.com/keptn/go-utils v0.6.3-0.20200526105520-9ecd1bc80151/go.mod h1:aDNFm3olvCZd7AE6/Xyir4g5Mw6E89mjhKt0zoJHC6g=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515/go.mod h1:+0opPa2QZZtGFBFZlji/RkVcI2GknAs/DXo4wKdlNEc=

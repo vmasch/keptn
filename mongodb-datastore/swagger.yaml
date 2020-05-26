@@ -169,6 +169,8 @@ definitions:
         properties:
           shkeptncontext:
             type: string
+          triggerid:
+            type: string
   error:
     type: object
     required:

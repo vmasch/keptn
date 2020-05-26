@@ -29,6 +29,10 @@ func (ti *TestInfo) ToString() string {
 }
 
 func getConfigurationServiceURL() string {
+	if os.Getenv("API_URL") != "" {
+		return os.Getenv("API_URL")
+	}
+
 	if os.Getenv("env") == "production" {
 		return "configuration-service:8080"
 	}

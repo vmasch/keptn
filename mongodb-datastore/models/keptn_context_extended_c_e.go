@@ -7,17 +7,21 @@ package models
 
 import (
 	"github.com/go-openapi/errors"
-	strfmt "github.com/go-openapi/strfmt"
+	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
 
 // KeptnContextExtendedCE keptn context extended c e
+//
 // swagger:model KeptnContextExtendedCE
 type KeptnContextExtendedCE struct {
 	Event
 
 	// shkeptncontext
 	Shkeptncontext string `json:"shkeptncontext,omitempty"`
+
+	// triggerid
+	Triggerid string `json:"triggerid,omitempty"`
 }
 
 // UnmarshalJSON unmarshals this object from a JSON structure
@@ -32,12 +36,16 @@ func (m *KeptnContextExtendedCE) UnmarshalJSON(raw []byte) error {
 	// AO1
 	var dataAO1 struct {
 		Shkeptncontext string `json:"shkeptncontext,omitempty"`
+
+		Triggerid string `json:"triggerid,omitempty"`
 	}
 	if err := swag.ReadJSON(raw, &dataAO1); err != nil {
 		return err
 	}
 
 	m.Shkeptncontext = dataAO1.Shkeptncontext
+
+	m.Triggerid = dataAO1.Triggerid
 
 	return nil
 }
@@ -51,19 +59,21 @@ func (m KeptnContextExtendedCE) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	_parts = append(_parts, aO0)
-
 	var dataAO1 struct {
 		Shkeptncontext string `json:"shkeptncontext,omitempty"`
+
+		Triggerid string `json:"triggerid,omitempty"`
 	}
 
 	dataAO1.Shkeptncontext = m.Shkeptncontext
+
+	dataAO1.Triggerid = m.Triggerid
 
 	jsonDataAO1, errAO1 := swag.WriteJSON(dataAO1)
 	if errAO1 != nil {
 		return nil, errAO1
 	}
 	_parts = append(_parts, jsonDataAO1)
-
 	return swag.ConcatJSON(_parts...), nil
 }
 

@@ -26,8 +26,9 @@ const eventbroker = "EVENTBROKER"
 
 type envConfig struct {
 	// Port on which to listen for cloudevents
-	Port int    `envconfig:"RCV_PORT" default:"8080"`
-	Path string `envconfig:"RCV_PATH" default:"/"`
+	Port   int    `envconfig:"RCV_PORT" default:"8080"`
+	Path   string `envconfig:"RCV_PATH" default:"/"`
+	APIUrl string `envconfig:"API_URL"`
 }
 
 func main() {
@@ -41,6 +42,7 @@ func main() {
 func gotEvent(ctx context.Context, event cloudevents.Event) error {
 	var shkeptncontext string
 	event.Context.ExtensionAs("shkeptncontext", &shkeptncontext)
+	log.Println(event.ID()+ " - " + shkeptncontext)
 
 	logger := keptn.NewLogger(shkeptncontext, event.Context.GetID(), "jmeter-service")
 
@@ -50,7 +52,7 @@ func gotEvent(ctx context.Context, event cloudevents.Event) error {
 		return err
 	}
 
-	if event.Type() != keptn.DeploymentFinishedEventType {
+	if event.Type() != keptn.DeploymentFinishedEventType && event.Type() != "sh.keptn.event.test.triggered" {
 		const errorMsg = "Received unexpected keptn event"
 		logger.Error(errorMsg)
 		return errors.New(errorMsg)
@@ -66,7 +68,9 @@ func gotEvent(ctx context.Context, event cloudevents.Event) error {
 }
 
 func runTests(event cloudevents.Event, shkeptncontext string, data keptn.DeploymentFinishedEventData, logger *keptn.Logger) {
-	keptnHandler, err := keptn.NewKeptn(&event, keptn.KeptnOpts{})
+	eventbroker := os.Getenv("API_URL") + "/v1/event"
+	configservice := os.Getenv("API_URL") + "/configuration-service"
+	keptnHandler, err := keptn.NewKeptn(&event, keptn.KeptnOpts{EventBrokerURL: eventbroker, ConfigurationServiceURL: configservice})
 	if err != nil {
 		logger.Error("Could not initialize Keptn handler: " + err.Error())
 	}
@@ -219,7 +223,6 @@ func sendTestsFinishedEvent(keptnHandler *keptn.Keptn, incomingEvent cloudevents
 	testFinishedData.End = time.Now().Format(time.RFC3339)
 	// set test result
 	testFinishedData.Result = result
-	testFinishedData.Test = keptn.TestData{TriggeredID: incomingEvent.ID()}
 
 	event := cloudevents.Event{
 		Context: cloudevents.EventContextV02{
@@ -228,7 +231,7 @@ func sendTestsFinishedEvent(keptnHandler *keptn.Keptn, incomingEvent cloudevents
 			Type:        keptn.TestsFinishedEventType,
 			Source:      types.URLRef{URL: *source},
 			ContentType: &contentType,
-			Extensions:  map[string]interface{}{"shkeptncontext": keptnHandler.KeptnContext},
+			Extensions:  map[string]interface{}{"shkeptncontext": keptnHandler.KeptnContext, "triggerid": incomingEvent.ID()},
 		}.AsV02(),
 		Data: testFinishedData,
 	}

@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"regexp"
@@ -44,12 +45,15 @@ func executeJMeter(testInfo *TestInfo, scriptName string, resultsDir string, url
 	os.RemoveAll(resultsDir)
 	os.MkdirAll(resultsDir, 0644)
 
-	resourceHandler := configutils.NewResourceHandler(getConfigurationServiceURL())
+	resourceHandler := configutils.NewAuthenticatedResourceHandler(getConfigurationServiceURL(),os.Getenv("API_TOKEN"),"x-token",http.DefaultClient,"https")
+
+	fmt.Println(getConfigurationServiceURL())
 	testScriptResource, err := resourceHandler.GetServiceResource(testInfo.Project, testInfo.Stage, testInfo.Service, scriptName)
 
 	// if no test file has been found, we assume that no tests should be executed
 	if err != nil || testScriptResource == nil || testScriptResource.ResourceContent == "" {
-		logger.Debug("Skipping test execution because no tests have been defined.")
+		logger.Debug("Skipping test execution because no tests have been defined")
+		logger.Debug(err.Error())
 		return true, nil
 	}
 

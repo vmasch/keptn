@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"fmt"
+	"io/ioutil"
+
 	"github.com/ghodss/yaml"
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/runtime/middleware"
@@ -12,7 +14,6 @@ import (
 	"github.com/keptn/keptn/configuration-service/config"
 	"github.com/keptn/keptn/configuration-service/models"
 	"github.com/keptn/keptn/configuration-service/restapi/operations/stage"
-	"io/ioutil"
 )
 
 func getStages(params stage.GetProjectProjectNameStageParams) ([]*models.Stage, errors.Error) {
@@ -68,8 +69,23 @@ func PostProjectProjectNameStageHandlerFunc(params stage.PostProjectProjectNameS
 
 	common.LockProject(params.ProjectName)
 	defer common.UnlockProject(params.ProjectName)
-	
-	err := common.CreateBranch(params.ProjectName, params.Stage.StageName, "master")
+
+	err := common.CheckoutBranch(params.ProjectName, params.Stage.StageName, false)
+	projectConfigPath := config.ConfigDir + "/" + params.ProjectName + "/shipyard.yaml"
+	dat, err := ioutil.ReadFile(projectConfigPath)
+
+	shipyard := utils.Shipyard{}
+	err = yaml.Unmarshal(dat, &shipyard)
+
+	sourceBranch := "master"
+	for _, stage := range shipyard.Stages {
+		if stage.Name == params.Stage.StageName {
+			break
+		}
+		sourceBranch = stage.Name
+	}
+
+	err = common.CreateBranch(params.ProjectName, params.Stage.StageName, sourceBranch)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Could not create %s branch for project %s", params.Stage.StageName, params.ProjectName))
 		logger.Error(err.Error())

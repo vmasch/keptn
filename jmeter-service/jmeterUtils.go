@@ -3,12 +3,13 @@ package main
 import (
 	"errors"
 	"fmt"
-	keptncommon "github.com/keptn/go-utils/pkg/lib/keptn"
 	"net/url"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+
+	keptncommon "github.com/keptn/go-utils/pkg/lib/keptn"
 
 	configutils "github.com/keptn/go-utils/pkg/api/utils"
 	keptnutils "github.com/keptn/go-utils/pkg/lib"
@@ -36,6 +37,21 @@ func getConfigurationServiceURL() string {
 		return os.Getenv("CONFIGURATION_SERVICE_URL")
 	}
 	return "localhost:8080"
+}
+
+/**
+ * Returns additoinal JMeter Command Line Parameters including additional params passed to the JMeter script
+ */
+func addJMeterCommandLineArguments(testInfo *TestInfo, initialList []string) []string {
+	dtTenant := fmt.Sprintf("-JDT_TENANT=%s", os.Getenv("DT_TENANT"))
+	dtAPIToken := fmt.Sprintf("-JDT_API_TOKEN=%s", os.Getenv("DT_API_TOKEN"))
+
+	keptnProject := fmt.Sprintf("-JKEPTN_PROJECT=%s", testInfo.Project)
+	keptnStage := fmt.Sprintf("-JKEPTN_STAGE=%s", testInfo.Stage)
+	keptnService := fmt.Sprintf("-JKEPTN_SERVICE=%s", testInfo.Service)
+	keptnTestStrategy := fmt.Sprintf("-JKEPTN_TESTSTRATEGY=%s", testInfo.TestStrategy)
+
+	return append(initialList, dtTenant, dtAPIToken, keptnProject, keptnStage, keptnService, keptnTestStrategy)
 }
 
 func executeJMeter(testInfo *TestInfo, workload *Workload, resultsDir string, url *url.URL, LTN string, funcValidation bool, logger *keptncommon.Logger) (bool, error) {
@@ -100,7 +116,8 @@ func executeJMeter(testInfo *TestInfo, workload *Workload, resultsDir string, ur
 
 	testInfoStr := testInfo.ToString() + ", scriptName: " + workload.Script + ", serverURL: " + url.String()
 	logger.Debug("Starting JMeter test. " + testInfoStr)
-	res, err := keptnutils.ExecuteCommand("jmeter", []string{"-n", "-t", "./" + workload.Script,
+
+	jMeterCommandLineArgs := []string{"-n", "-t", "./" + workload.Script,
 		// "-e", "-o", resultsDir,
 		"-l", resultsDir + "_result.tlf",
 		"-JPROTOCOL=" + url.Scheme,
@@ -111,7 +128,10 @@ func executeJMeter(testInfo *TestInfo, workload *Workload, resultsDir string, ur
 		"-JLoopCount=" + strconv.Itoa(workload.LoopCount),
 		"-JCHECK_PATH=" + derivePath(url),
 		"-JSERVER_PORT=" + derivePort(url),
-		"-JThinkTime=" + strconv.Itoa(workload.ThinkTime)})
+		"-JThinkTime=" + strconv.Itoa(workload.ThinkTime)}
+
+	jMeterCommandLineArgs = addJMeterCommandLineArguments(testInfo, jMeterCommandLineArgs)
+	res, err := keptnutils.ExecuteCommand("jmeter", jMeterCommandLineArgs)
 
 	logger.Info(res)
 	if err != nil {

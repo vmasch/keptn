@@ -45,12 +45,12 @@ func NewCredentialManager(autoApplyNewContext bool) (cm *CredentialManager) {
 // SetCreds stores the credentials consisting of an endpoint and an api token using pass or into a file in case
 // pass is unavailable.
 func (cm *CredentialManager) SetCreds(endPoint url.URL, apiToken string, namespace string) error {
-	if _, err := os.Stat(passwordStoreDirectory); os.IsNotExist(err) {
-		fmt.Println("Using a file-based storage for the key because the password-store seems to be not set up.")
-		apiTokenFile := cm.getLinuxApiTokenFile(namespace)
-		return ioutil.WriteFile(apiTokenFile, []byte(endPoint.String()+"\n"+apiToken), 0644)
-	}
-	return setCreds(pass.Pass{}, endPoint, apiToken, namespace)
+	//if _, err := os.Stat(passwordStoreDirectory); os.IsNotExist(err) {
+	fmt.Println("Using a file-based storage for the key because the password-store seems to be not set up.")
+	apiTokenFile := cm.getLinuxApiTokenFile(namespace)
+	return ioutil.WriteFile(apiTokenFile, []byte(endPoint.String()+"\n"+apiToken), 0644)
+	//}
+	//return setCreds(pass.Pass{}, endPoint, apiToken, namespace)
 }
 
 // GetCreds reads the credentials and returns an endpoint, the api token, or potentially an error.

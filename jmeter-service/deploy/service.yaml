@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
       - name: jmeter-service
-        image: keptn/jmeter-service:latest
+        image: keptn/jmeter-service:0.7.3-patch1
         livenessProbe:
           httpGet:
             path: /health
@@ -36,10 +36,24 @@ spec:
         ports:
         - containerPort: 8080
         env:
+        - name: DT_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: dynatrace
+              key: DT_API_TOKEN
+              optional: true
+        - name: DT_TENANT
+          valueFrom:
+            secretKeyRef:
+              name: dynatrace
+              key: DT_TENANT
+              optional: true
         - name: EVENTBROKER
           value: 'http://event-broker/keptn'
+        - name: DEBUG_KEEP_TEMP_FILES
+          value: "false"
       - name: distributor
-        image: keptn/distributor:0.6.1
+        image: keptn/distributor:0.7.3
         livenessProbe:
           httpGet:
             path: /health

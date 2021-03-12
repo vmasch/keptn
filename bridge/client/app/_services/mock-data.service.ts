@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import {BehaviorSubject, Observable, Subject} from "rxjs";
+import {BehaviorSubject, Observable, of, Subject} from "rxjs";
 import {Project} from "../_models/project";
 import {Root} from "../_models/root";
 import {Service} from "../_models/service";
@@ -39,6 +39,7 @@ export class MockDataService {
 
 
   private _projects = new BehaviorSubject<Project[]>(null);
+  private _dashboardProjects = new BehaviorSubject<Project[]>(null);
   private _roots = new BehaviorSubject<Root[]>(null);
   private _keptnInfo = new BehaviorSubject<Object>({});
   private _rootsLastUpdated: Object = {};
@@ -52,6 +53,10 @@ export class MockDataService {
 
   get projects(): Observable<Project[]> {
     return this._projects.asObservable();
+  }
+
+  get dashboardProjects(): Observable<Project[]> {
+    return this._dashboardProjects.asObservable();
   }
 
   get roots(): Observable<Root[]> {
@@ -86,6 +91,25 @@ export class MockDataService {
   public loadProjects() {
     this._projects.next([...this._projects.getValue() ? this._projects.getValue() : [], ...this.mockProjects]);
     this.mockProjects = [];
+  }
+
+  public loadRecentSequences(): Observable<Project[]> {
+    const projects = this._projects.getValue().map(project => {
+      let roots = [];
+      project.stages.forEach(stage => {
+        stage.services.forEach(service => {
+          roots = [...this.mockRoots[project.projectName + '.' + service.serviceName] || [], ...service.roots || [], ...roots];
+        });
+      });
+
+      roots.sort(DateUtil.compareTraceTimesAsc);
+      project.recentSequences = roots.slice(0, 5).map(root => {
+        root.traces = root.traces.map(trace => Trace.fromJSON(trace));
+        return Root.fromJSON(root);
+      });
+      return project;
+    });
+    return of(projects);
   }
 
   public loadRoots(project: Project, service: Service) {

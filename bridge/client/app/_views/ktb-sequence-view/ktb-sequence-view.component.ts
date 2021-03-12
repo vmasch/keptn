@@ -105,15 +105,16 @@ export class KtbSequenceViewComponent implements OnInit, OnDestroy {
           });
 
         this.dataService.roots
-          .pipe(takeUntil(this.unsubscribe$))
+          .pipe(
+            takeUntil(this.unsubscribe$),
+            filter(roots => roots && roots.length !== 0)
+          )
           .subscribe(roots => {
-            if (!this.currentSequence && roots && params.shkeptncontext) {
+            if (!this.currentSequence && params.shkeptncontext) {
               this.selectSequence({root: roots.find(sequence => sequence.shkeptncontext === params.shkeptncontext)});
             }
-            if (roots) {
-              this.updateFilterSequence(roots);
-              this._filterDataSource.data = this.filterFieldData;
-            }
+            this.updateFilterSequence(roots);
+            this._filterDataSource.data = this.filterFieldData;
             this._changeDetectorRef.markForCheck();
           });
       });

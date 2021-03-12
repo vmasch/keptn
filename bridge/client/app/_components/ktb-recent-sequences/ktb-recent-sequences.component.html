@@ -1,0 +1,27 @@
+Recent sequences:
+<dt-table [dataSource]="project.recentSequences">
+  <ng-container dtColumnDef="serviceName" [dtColumnProportion]="2">
+    <dt-cell *dtCellDef="let row">
+      <dt-icon *ngIf="!row.isLoading(); else showLoading" class="event-icon" [class.error]="row.isFaulty()" [class.success]="row.isSuccessful() && !row.isFaulty()" [class.highlight]="row.getPendingApprovals().length !== 0" [name]="row.isFinished() ? row.getIcon() : row.getLastTrace().getIcon()"></dt-icon>
+      <ng-template #showLoading>
+        <button class="m-0 p-0" dt-button disabled variant="nested">
+          <dt-loading-spinner aria-label="Task is running..."></dt-loading-spinner>
+        </button>
+      </ng-template>
+      {{row.getService()}} in {{row.getStage()}}
+    </dt-cell>
+  </ng-container>
+  <ng-container dtColumnDef="sequenceName" [dtColumnProportion]="2">
+    <dt-cell *dtCellDef="let row">
+      <a [routerLink]="['/project', project.projectName, 'sequence', row.shkeptncontext]">
+        {{row.getLabel()}} {{row.getStatusLabel()}}
+      </a>
+    </dt-cell>
+  </ng-container>
+  <ng-container dtColumnDef="timePassed" dtColumnAlign="number">
+    <dt-cell *dtCellDef="let row">
+      <span [textContent]="dateUtil.getDurationFormattedShort(row.time)"></span>
+    </dt-cell>
+  </ng-container>
+  <dt-row *dtRowDef="let row; columns: ['serviceName', 'sequenceName', 'timePassed']"></dt-row>
+</dt-table>

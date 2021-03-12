@@ -42,19 +42,19 @@ describe('AppComponent', () => {
     expect(comp).toBeTruthy();
   });
 
-  it('should render title', async(() => {
+  it('should render title', (() => {
     fixture.detectChanges();
     const compiled = fixture.debugElement.nativeElement;
     expect(compiled.querySelector('.brand p').textContent).toContain('keptn');
   }));
 
-  it('should render project "sockshop"', async(() => {
+  it('should render project "sockshop"', (() => {
     fixture.detectChanges();
     const projectTileTitle = fixture.debugElement.query(By.css('#sockshop .dt-tile-title'));
     expect(projectTileTitle.nativeElement.textContent).toContain('sockshop');
   }));
 
-  it('should set base href correctly', async(() => {
+  it('should set base href correctly', (() => {
     fixture.detectChanges();
 
     // NOTE: function used in index.html, this is a duplicate only for testing

@@ -102,6 +102,42 @@ export class DataService {
     this.loadKeptnInfo();
   }
 
+  public loadRecentSequences(): Observable<Project[]> {
+      return this.projects.pipe(
+        filter(projects => !!projects),
+        mergeMap(projects =>
+          from(projects).pipe(
+            mergeMap((project: Project) => {
+              return this.apiService.getRoots(project.projectName, undefined, undefined, 5).pipe(
+                map(response => response.body.events || []),
+                mergeMap( roots =>
+                  from(roots).pipe(
+                    mergeMap(
+                      root => {
+                        return this.apiService.getTraces(root.shkeptncontext, root.data.project)
+                          .pipe(
+                            map(response => response.body.events || []),
+                            map(this.traceMapper),
+                            map(traces => traces.filter(trace => !trace.triggeredid)),
+                            map(traces => ({ ...root, traces}))
+                          )
+                      }
+                    ),
+                    toArray()
+                  )
+                ),
+                map(roots  => {
+                  project.recentSequences = roots.map(root => Root.fromJSON(root)).sort(DateUtil.compareTraceTimesAsc);
+                  return project;
+                })
+              );
+            }),
+            toArray()
+          )
+        )
+      )
+  }
+
   public loadProjects() {
     this.apiService.getProjects(this._keptnInfo.getValue().bridgeInfo.projectsPageSize||50)
       .pipe(

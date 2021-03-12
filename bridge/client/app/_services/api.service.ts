@@ -110,12 +110,14 @@ export class ApiService {
       .get<ServiceResult>(url);
   }
 
-  public getRoots(projectName: string, serviceName?: string, fromTime?: string): Observable<HttpResponse<EventResult>> {
-    let url = `${this._baseUrl}/mongodb-datastore/event?root=true&pageSize=20&project=${projectName}`;
-    if(serviceName)
+  public getRoots(projectName: string, serviceName?: string, fromTime?: string, pageSize= 20): Observable<HttpResponse<EventResult>> {
+    let url = `${this._baseUrl}/mongodb-datastore/event?root=true&pageSize=${pageSize}&project=${projectName}`;
+    if (serviceName) {
       url += `&service=${serviceName}`;
-    if(fromTime)
+    }
+    if (fromTime) {
       url += `&fromTime=${fromTime}`;
+    }
     return this.http
       .get<EventResult>(url, { observe: 'response' });
   }

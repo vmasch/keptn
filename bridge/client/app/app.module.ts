@@ -85,6 +85,7 @@ import { KtbSequenceViewComponent } from "./_views/ktb-sequence-view/ktb-sequenc
 import { KtbServiceViewComponent } from "./_views/ktb-service-view/ktb-service-view.component";
 import { KeptnUrlPipe } from './_pipes/keptn-url.pipe';
 import {KtbSliBreakdownCriteriaItemComponent} from './_components/ktb-sli-breakdown-criteria-item/ktb-sli-breakdown-criteria-item.component';
+import { KtbRecentSequencesComponent } from './_components/ktb-recent-sequences/ktb-recent-sequences.component';
 
 registerLocaleData(localeEn, 'en');
 
@@ -128,6 +129,7 @@ registerLocaleData(localeEn, 'en');
     KtbStageDetailsComponent,
     KeptnUrlPipe,
     KtbSliBreakdownCriteriaItemComponent,
+    KtbRecentSequencesComponent,
   ],
   imports: [
     BrowserModule,

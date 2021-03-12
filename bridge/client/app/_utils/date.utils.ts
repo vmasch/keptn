@@ -11,23 +11,45 @@ export class DateUtil {
   public DEFAULT_TIME_FORMAT = 'HH:mm';
 
   public getDurationFormatted(start, end?) {
-    let diff = moment(end).diff(moment(start));
-    let duration = moment.duration(diff);
+    const duration = this.getDuration(start, end);
 
-    let days = Math.floor(duration.asDays());
-    let hours = Math.floor(duration.asHours()%24);
-    let minutes = Math.floor(duration.asMinutes()%60);
-    let seconds = Math.floor(duration.asSeconds()%60);
-
-    let result = seconds+' seconds';
-    if(minutes > 0)
-      result = minutes+' minutes '+result;
-    if(hours > 0)
-      result = hours+' hours '+result;
-    if(days > 0)
-      result = days+' days '+result;
+    let result = duration.seconds+' seconds';
+    if(duration.minutes > 0)
+      result = duration.minutes+' minutes '+result;
+    if(duration.hours > 0)
+      result = duration.hours+' hours '+result;
+    if(duration.days > 0)
+      result = duration.days+' days '+result;
 
     return result;
+  }
+
+  private getDuration(start, end?) {
+    const diff = moment(end).diff(moment(start));
+    const duration = moment.duration(diff);
+
+    const days = Math.floor(duration.asDays());
+    const hours = Math.floor(duration.asHours()%24);
+    const minutes = Math.floor(duration.asMinutes()%60);
+    const seconds = Math.floor(duration.asSeconds()%60);
+    return {days, hours, minutes, seconds};
+  }
+
+  public getDurationFormattedShort(start, end?) {
+    const duration = this.getDuration(start, end);
+
+    let result = '';
+    if (duration.days > 0) {
+      result = duration.days + ' day' + (duration.days === 1 ? '' : 's');
+    } else if (duration.hours > 0) {
+      result = duration.hours + ' hour' + (duration.hours === 1 ? '' : 's');
+    } else if (duration.minutes > 0) {
+      result = duration.minutes + ' min.';
+    } else {
+      result = duration.seconds + ' sec.';
+    }
+
+    return result + ' ago';
   }
 
   public getCalendarFormats(showSeconds?: boolean) {

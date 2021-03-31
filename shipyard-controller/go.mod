@@ -5,6 +5,11 @@ go 1.13
 require (
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/cloudevents/sdk-go/v2 v2.3.1
+	github.com/containerd/containerd v1.4.4 // indirect
+	github.com/docker/cli v20.10.5+incompatible
+	github.com/docker/docker v20.10.5+incompatible // indirect
+	github.com/docker/docker-credential-helpers v0.6.3 // indirect
+	github.com/fvbommel/sortorder v1.0.2 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-openapi/errors v0.19.9
@@ -20,8 +25,12 @@ require (
 	github.com/keptn/go-utils v0.8.2
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
+	github.com/morikuni/aec v1.0.0 // indirect
+	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/swaggo/swag v1.7.0
+	github.com/theupdateframework/notary v0.7.0 // indirect
 	github.com/ugorji/go v1.2.4 // indirect
 	github.com/xdg/stringprep v1.0.0 // indirect
 	go.mongodb.org/mongo-driver v1.4.6

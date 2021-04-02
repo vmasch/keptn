@@ -1,15 +1,8 @@
-package handler
+package state
 
 import (
-	"errors"
-	"fmt"
-	"github.com/docker/cli/cli/command/task"
 	keptnapimodels "github.com/keptn/go-utils/pkg/api/models"
-	keptncommon "github.com/keptn/go-utils/pkg/lib/keptn"
 	keptnv2 "github.com/keptn/go-utils/pkg/lib/v0_2_0"
-	"github.com/keptn/keptn/shipyard-controller/common"
-	"github.com/keptn/keptn/shipyard-controller/models"
-	"strings"
 	"time"
 )
 
@@ -27,37 +20,35 @@ type TaskSequenceExecutor struct {
 	Name string // the source of the service that sent a .started event
 }
 
-type TaskSequenceExecutionState struct {
-	Status        TaskSequenceStatus
-	Started       time.Time
-	InputEvent    keptnapimodels.KeptnContextExtendedCE // event that triggered the task sequence
-	KeptnContext  string
-	SequenceName  string
-	Stage         string
-	EventScope    keptnv2.EventData // project, stage, service, labels
-	Shipyard      keptnv2.Shipyard  // in case the shipyard changes during the task sequence execution, keep it in the state
-	CurrentState  TaskState
-	PreviousTasks []TaskState
-}
-
-func NewTaskSequenceExecutionState(event keptnapimodels.KeptnContextExtendedCE, eventScope *keptnv2.EventData, shipyard *keptnv2.Shipyard) TaskSequenceExecutionState {
+func NewTaskSequenceExecutionState(event keptnapimodels.KeptnContextExtendedCE, shipyard keptnv2.Shipyard) TaskSequenceExecutionState {
 	ts := TaskSequenceExecutionState{
 		Status:        TaskSequenceTriggered,
 		Started:       time.Now(),
 		InputEvent:    event,
-		KeptnContext:  "",
-		Stage:         "",
-		EventScope:    *eventScope,
-		Shipyard:      *shipyard,
-		CurrentState:  TaskState{},
+		Shipyard:      shipyard,
+		CurrentTask:   TaskState{},
 		PreviousTasks: []TaskState{},
 	}
+
+	//for _, stage := range shipyard.Spec.Stages {
+	//	// TODO: get first task and set CurrentTask and TriggeredEvent
+	//}
+
+	// generate event payload for task.triggered event, based on sequence input event and task properties
 	return ts
+}
+
+type TaskSequenceExecutionState struct {
+	Status        TaskSequenceStatus
+	Started       time.Time
+	InputEvent    keptnapimodels.KeptnContextExtendedCE // event that triggered the task sequence
+	Shipyard      keptnv2.Shipyard                      // in case the shipyard changes during the task sequence execution, keep it in the state
+	CurrentTask   TaskState
+	PreviousTasks []TaskState
 }
 
 type TaskState struct {
 	Name           string
-	Index          int // in case we have multiple tasks with the same name in a sequence
 	TriggeredEvent keptnapimodels.KeptnContextExtendedCE
 	Executors      []TaskSequenceExecutor
 	FinishedEvents []keptnapimodels.KeptnContextExtendedCE
@@ -67,62 +58,8 @@ type TaskState struct {
 	Started        time.Time
 }
 
-func (ts *TaskSequenceExecutionState) HandleTriggeredEvent(event keptnapimodels.KeptnContextExtendedCE) error {
-	return nil
-}
-
-func (ts *TaskSequenceExecutionState) HandleStartedEvent(event keptnapimodels.KeptnContextExtendedCE) error {
-	return nil
-}
-
-func (ts *TaskSequenceExecutionState) HandleFinishedEvent(event keptnapimodels.KeptnContextExtendedCE) error {
-	return nil
-}
-
-func (ts *TaskSequenceExecutionState) StartExecution() error {
-	sequence, err := getTaskSequenceInStage(ts.Stage, ts.SequenceName, &ts.Shipyard)
-	if err != nil {
-		return err
-	}
-
-	if len(sequence.Tasks) == 0 {
-		return errors.New("no tasks in sequence")
-	}
-	task := sequence.Tasks[0]
-
-	taskState := TaskState{
-		Name:           task.Name,
-		Index:          0,
-		TriggeredEvent: keptnapimodels.KeptnContextExtendedCE{},
-		Executors:      nil,
-		FinishedEvents: nil,
-		IsFinished:     false,
-		Result:         "",
-		Status:         "",
-		Started:        time.Now(),
-	}
-
-	inputParameters := map[string]interface{}{
-		task.Name: task.Properties,
-	}
-
-	common.Merge(ts.InputEvent.Data, inputParameters)
-	ts.CurrentState = taskState
-	return nil
-}
-
-type TaskSequenceQueue struct {
-}
-
-//go:generate moq -pkg fake -skip-ensure -out ./fake/task_sequence_repo.go . ITaskSequenceExecutionStateRepo
-type ITaskSequenceExecutionStateRepo interface {
-	StoreTaskSequenceExecutionState(state TaskSequenceExecutionState) error
-	GetTaskSequenceExecutionState(keptnContext, stage string) *TaskSequenceExecutionState
-	UpdateTaskSequenceExecutionState(state TaskSequenceExecutionState) error
-}
-
+/*
 type SimpleShipyardController struct {
-	TaskSequenceRepo   ITaskSequenceExecutionStateRepo
 	ConfigurationStore common.ConfigurationStore
 	logger             keptncommon.LoggerInterface
 }
@@ -161,12 +98,12 @@ func (sc *SimpleShipyardController) handleTriggeredEvent(event keptnapimodels.Ke
 
 	// eventScope contains all properties (project, stage, service) that are needed to determine the current state within a task sequence
 	// if those are not present the next action can not be determined
-	eventScope, err := getEventScope(event)
+	eventScope, err := handler.getEventScope(event)
 	if err != nil {
 		sc.logger.Error("Could not determine eventScope of event: " + err.Error())
 		return err
 	}
-	sc.logger.Info(fmt.Sprintf("Context of event %s, sent by %s: %s", *event.Type, *event.Source, printObject(event)))
+	sc.logger.Info(fmt.Sprintf("Context of event %s, sent by %s: %s", *event.Type, *event.Source, handler.printObject(event)))
 
 	sc.logger.Info("received event of type " + *event.Type + " from " + *event.Source)
 	split := strings.Split(*event.Type, ".")
@@ -207,7 +144,7 @@ func (sc *SimpleShipyardController) handleTriggeredEvent(event keptnapimodels.Ke
 		Stage:         stageName,
 		EventScope:    *eventScope,
 		Shipyard:      *shipyard,
-		CurrentState:  TaskState{},
+		CurrentTask:  TaskState{},
 		PreviousTasks: []TaskState{},
 	}
 
@@ -237,8 +174,9 @@ func getTaskSequenceInStage(stageName, taskSequenceName string, shipyard *keptnv
 					},
 				}, nil
 			}
-			return nil, errNoTaskSequence
+			return nil, handler.errNoTaskSequence
 		}
 	}
-	return nil, errNoStage
+	return nil, handler.errNoStage
 }
+*/

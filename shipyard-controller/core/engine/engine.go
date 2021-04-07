@@ -1,8 +1,11 @@
 package engine
 
 import (
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/google/uuid"
 	keptnapimodels "github.com/keptn/go-utils/pkg/api/models"
 	keptnv2 "github.com/keptn/go-utils/pkg/lib/v0_2_0"
+	"github.com/keptn/keptn/shipyard-controller/common"
 	"github.com/keptn/keptn/shipyard-controller/core/db"
 	"github.com/keptn/keptn/shipyard-controller/core/state"
 	"time"
@@ -66,12 +69,25 @@ func (e *Engine) SetState(event keptnapimodels.KeptnContextExtendedCE) error {
 		return err
 	}
 
-	_, err = e.ShipyardRepo.GetTaskSequence(*event.Type)
+	taskSequence, err := e.ShipyardRepo.GetTaskSequence(*event.Type)
 	if err != nil {
 		return err
 	}
 
-	e.State = state.NewTaskSequenceExecutionState(event, *shipyard)
+	newState, err := state.NewTaskSequenceExecutionState(event, *shipyard, *taskSequence)
+	if err != nil {
+		return err
+	}
+	e.State = *newState
+
+	if len(e.State.TaskSequence.Tasks) > 0 {
+		firstTask := e.State.TaskSequence.Tasks[0]
+		e.State.CurrentTask.Name = firstTask.Name
+		e.State.CurrentTask.Triggered = time.Now()
+		e.State.CurrentTask.TriggeredEvent = keptnapimodels.KeptnContextExtendedCE{} // TODO: merge payload of task input event with properties of task
+	}
+
+	e.State = DeriveNextTriggeredEvent(e.State)
 
 	// get first task of sequence
 
@@ -83,7 +99,43 @@ func (e *Engine) SetState(event keptnapimodels.KeptnContextExtendedCE) error {
 
 	// finished?
 
-	panic("implement me")
+	return nil
+}
+
+func DeriveNextTriggeredEvent(ts state.TaskSequenceExecutionState) state.TaskSequenceExecutionState {
+	// merge inputEvent, previous finished events and properties of next task
+	mergedPayload := ts.InputEvent.Data
+	for _, task := range ts.PreviousTasks {
+		for _, finishedEvent := range task.FinishedEvents {
+			mergedPayload = common.Merge(mergedPayload, finishedEvent.Data)
+		}
+	}
+
+	taskProperties := map[string]interface{}{}
+	if len(ts.TaskSequence.Tasks) < len(ts.PreviousTasks)+1 {
+		// make sure we do not have an index out of bounds access
+		return ts
+	}
+	taskProperties[ts.CurrentTask.Name] = ts.TaskSequence.Tasks[len(ts.PreviousTasks)].Properties // TODO: should we store the task explicitly in ts.CurrentTask?
+	mergedPayload = common.Merge(mergedPayload, taskProperties)
+
+	// TODO: move this into go-utils
+	source := "shipyard-controller"
+	eventType := keptnv2.GetTriggeredEventType(ts.CurrentTask.Name)
+	triggeredEvent := keptnapimodels.KeptnContextExtendedCE{
+		Contenttype:        cloudevents.ApplicationJSON,
+		Data:               mergedPayload,
+		ID:                 uuid.New().String(),
+		Shkeptncontext:     ts.InputEvent.Shkeptncontext,
+		Shkeptnspecversion: common.GetKeptnSpecVersion(),
+		Source:             &source,
+		Specversion:        cloudevents.VersionV1,
+		// Time:               time.Now().String(),
+		Type: &eventType,
+	}
+
+	ts.CurrentTask.TriggeredEvent = triggeredEvent
+	return ts
 }
 
 func (e *Engine) ExecuteState() error {

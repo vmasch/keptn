@@ -20,31 +20,28 @@ type TaskSequenceExecutor struct {
 	Name string // the source of the service that sent a .started event
 }
 
-func NewTaskSequenceExecutionState(event keptnapimodels.KeptnContextExtendedCE, shipyard keptnv2.Shipyard) TaskSequenceExecutionState {
-	ts := TaskSequenceExecutionState{
+func NewTaskSequenceExecutionState(event keptnapimodels.KeptnContextExtendedCE, shipyard keptnv2.Shipyard, sequence keptnv2.Sequence) (*TaskSequenceExecutionState, error) {
+	ts := &TaskSequenceExecutionState{
 		Status:        TaskSequenceTriggered,
-		Started:       time.Now(),
+		Triggered:     time.Now(),
 		InputEvent:    event,
 		Shipyard:      shipyard,
+		TaskSequence:  sequence,
 		CurrentTask:   TaskState{},
 		PreviousTasks: []TaskState{},
 	}
 
-	//for _, stage := range shipyard.Spec.Stages {
-	//	// TODO: get first task and set CurrentTask and TriggeredEvent
-	//}
-
-	// generate event payload for task.triggered event, based on sequence input event and task properties
-	return ts
+	return ts, nil
 }
 
 type TaskSequenceExecutionState struct {
 	Status        TaskSequenceStatus
-	Started       time.Time
+	Triggered     time.Time
 	InputEvent    keptnapimodels.KeptnContextExtendedCE // event that triggered the task sequence
 	Shipyard      keptnv2.Shipyard                      // in case the shipyard changes during the task sequence execution, keep it in the state
+	TaskSequence  keptnv2.Sequence                      // keep the taskSequence in the state as well, because retrieving it from the shipyard, based on the incoming event will get annoying otherwise
 	CurrentTask   TaskState
-	PreviousTasks []TaskState
+	PreviousTasks []TaskState // TODO: should this be a map from stage to []TaskState?
 }
 
 type TaskState struct {
@@ -55,7 +52,7 @@ type TaskState struct {
 	IsFinished     bool
 	Result         keptnv2.ResultType
 	Status         keptnv2.StatusType
-	Started        time.Time
+	Triggered      time.Time
 }
 
 /*
@@ -138,7 +135,7 @@ func (sc *SimpleShipyardController) handleTriggeredEvent(event keptnapimodels.Ke
 
 	ts := TaskSequenceExecutionState{
 		Status:        TaskSequenceTriggered,
-		Started:       time.Now(),
+		Triggered:       time.Now(),
 		InputEvent:    event,
 		KeptnContext:  "",
 		Stage:         stageName,

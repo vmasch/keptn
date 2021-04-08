@@ -1,8 +1,7 @@
 package engine
 
 import (
-	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"github.com/google/uuid"
+	"github.com/go-openapi/strfmt"
 	keptnapimodels "github.com/keptn/go-utils/pkg/api/models"
 	keptnv2 "github.com/keptn/go-utils/pkg/lib/v0_2_0"
 	"github.com/keptn/keptn/shipyard-controller/common"
@@ -50,16 +49,6 @@ func (e *Engine) SetState(event keptnapimodels.KeptnContextExtendedCE) error {
 		return nil
 	}
 
-	// get first task of sequence
-
-	// get shipyard from configuration service
-	// can the event trigger a sequence - look into shipyard?
-	// if yes - create a new task sequence State and SetState()
-
-	// started?
-
-	// finished?
-
 	return nil
 }
 
@@ -71,12 +60,12 @@ func getEventStatusType(eventType string) string {
 	return statusType
 }
 
-func DeriveNextTriggeredEvent(ts state.TaskSequenceExecutionState) state.TaskSequenceExecutionState {
+func DeriveTriggeredEvent(ts state.TaskSequenceExecutionState) (*keptnapimodels.KeptnContextExtendedCE, error) {
 	// merge inputEvent, previous finished events and properties of next task
 	var mergedPayload interface{}
 	inputDataMap := map[string]interface{}{}
 	if err := keptnv2.Decode(ts.InputEvent.Data, &inputDataMap); err != nil {
-		return ts
+		return nil, err
 	}
 	mergedPayload = common.Merge(mergedPayload, inputDataMap)
 	for _, task := range ts.PreviousTasks {
@@ -86,46 +75,45 @@ func DeriveNextTriggeredEvent(ts state.TaskSequenceExecutionState) state.TaskSeq
 	}
 
 	taskProperties := map[string]interface{}{}
-	if len(ts.TaskSequence.Tasks) < len(ts.PreviousTasks)+1 {
-		// make sure we do not have an index out of bounds access
-		return ts
-	}
-	taskProperties[ts.CurrentTask.Name] = ts.TaskSequence.Tasks[len(ts.PreviousTasks)].Properties // TODO: should we store the task explicitly in ts.CurrentTask?
+
+	taskProperties[ts.CurrentTask.TaskName] = ts.TaskSequence.Tasks[len(ts.PreviousTasks)].Properties // TODO: should we store the task explicitly in ts.CurrentTask?
 	mergedPayload = common.Merge(mergedPayload, taskProperties)
 
-	// TODO: move this into go-utils
-	source := "shipyard-controller"
-	eventType := keptnv2.GetTriggeredEventType(ts.CurrentTask.Name)
-	triggeredEvent := keptnapimodels.KeptnContextExtendedCE{
-		Contenttype:        cloudevents.ApplicationJSON,
+	return &keptnapimodels.KeptnContextExtendedCE{
+		Contenttype:        "",
 		Data:               mergedPayload,
-		ID:                 uuid.New().String(),
-		Shkeptncontext:     ts.InputEvent.Shkeptncontext,
-		Shkeptnspecversion: common.GetKeptnSpecVersion(),
-		Source:             &source,
-		Specversion:        cloudevents.VersionV1,
-		// Time:               time.Now().String(),
-		Type: &eventType,
-	}
+		Extensions:         nil,
+		ID:                 ts.CurrentTask.TriggeredID,
+		Shkeptncontext:     "",
+		Shkeptnspecversion: "",
+		Source:             nil,
+		Specversion:        "",
+		Time:               strfmt.DateTime{},
+		Triggeredid:        "",
+		Type:               nil,
+	}, nil
 
-	ts.CurrentTask.TriggeredEvent = triggeredEvent
-	return ts
 }
 
 func (e *Engine) ExecuteState() error {
-
-	switch e.State.Status {
-	case state.TaskSequenceTriggered:
-		//e.State.CurrentTask.Name
-	case state.TaskSequenceInProgress:
-		break
+	event, err := DeriveTriggeredEvent(e.State)
+	if err != nil {
+		return err
 	}
+
+	_ = event
+	//switch e.State.Status {
+	//case state.TaskSequenceTriggered:
+	//	//e.State.CurrentTask.TaskName
+	//case state.TaskSequenceInProgress:
+	//	break
+	//}
 
 	return nil
 }
 
 func (e *Engine) PersistState() error {
-	return e.TaskSequenceRepo.StoreTaskSequenceExecutionState(e.State)
+	return e.TaskSequenceRepo.Store(e.State)
 }
 
 func (e *Engine) handleTriggeredEvent(event keptnapimodels.KeptnContextExtendedCE) error {
@@ -134,7 +122,7 @@ func (e *Engine) handleTriggeredEvent(event keptnapimodels.KeptnContextExtendedC
 		// TODO handle error
 		return err
 	}
-	// triggered? <stage>.<sequence>.<triggered>?
+
 	shipyard, err := e.ShipyardRepo.Sync(eventScope.GetProject())
 	if err != nil {
 		return err
@@ -149,30 +137,61 @@ func (e *Engine) handleTriggeredEvent(event keptnapimodels.KeptnContextExtendedC
 	if err != nil {
 		return err
 	}
-	e.State = *newState
 
-	if len(e.State.TaskSequence.Tasks) > 0 {
-		firstTask := e.State.TaskSequence.Tasks[0]
-		e.State.CurrentTask.Name = firstTask.Name
-		e.State.CurrentTask.Triggered = time.Now()
-		e.State.CurrentTask.TriggeredEvent = keptnapimodels.KeptnContextExtendedCE{} // TODO: merge payload of task input event with properties of task
+	if len(newState.TaskSequence.Tasks) > 0 {
+		firstTask := newState.TaskSequence.Tasks[0]
+		newState.CurrentTask.TaskName = firstTask.Name
+		newState.CurrentTask.TriggeredID = "NEW_ID" //TODO: generate ID
 	}
 
-	e.State = DeriveNextTriggeredEvent(e.State)
+	e.State = *newState
+
 	return nil
 }
 
 func (e *Engine) handleStartedEvent(event keptnapimodels.KeptnContextExtendedCE) error {
-	// event.Shkeptncontext
-	//event.Shkeptncontext
-	//event.Triggeredid
-	//event.Type // -> task name
 
-	// TODO lock for given shkeptncontext
-	//e.TaskSequenceRepo.GetTaskSequenceExecutionState()
+	taskName := *event.Type //TODO: this is worng, extract task name from type
+
+	// 1. Get current State
+	currentExecutionState, err := e.TaskSequenceRepo.Get(event.Shkeptncontext, "", taskName)
+	if err != nil {
+		return err
+	}
+
+	// 2. Search for task and update list of tasks
+	if _, ok := currentExecutionState.Tasks[taskName]; ok {
+		currentExecutionState.Tasks[taskName] = append(currentExecutionState.Tasks[taskName], state.TaskExecutor{})
+	} else {
+		currentExecutionState.Tasks[taskName] = []state.TaskExecutor{state.TaskExecutor{}}
+	}
+
 	return nil
 }
 
 func (e *Engine) handleFinishedEvent(event keptnapimodels.KeptnContextExtendedCE) error {
+
+	taskName := *event.Type // TODO: this is wrong, extract task name from type
+	source := *event.Source
+
+	// 1. Get current State
+	currentExecutionState, err := e.TaskSequenceRepo.Get(event.Shkeptncontext, "", taskName)
+	if err != nil {
+		return err
+	}
+
+	// 2. Search for task and update list of tasks
+	if tasks, ok := currentExecutionState.Tasks[taskName]; ok {
+		tmp := tasks[:0]
+		for _, t := range tasks {
+			if t.ExecutorName != source {
+				tmp = append(tmp, t)
+			}
+		}
+		currentExecutionState.Tasks[taskName] = tmp
+	}
+
+	// 3. if no more task is stored --> Update Sequence Execution State and trigger next sequence
+
 	return nil
 }

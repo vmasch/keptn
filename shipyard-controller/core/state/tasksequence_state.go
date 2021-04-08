@@ -27,8 +27,9 @@ func NewTaskSequenceExecutionState(event keptnapimodels.KeptnContextExtendedCE, 
 		InputEvent:    event,
 		Shipyard:      shipyard,
 		TaskSequence:  sequence,
-		CurrentTask:   TaskState{},
-		PreviousTasks: []TaskState{},
+		CurrentTask:   CurrentTask{},
+		PreviousTasks: nil,
+		Tasks:         nil,
 	}
 
 	return ts, nil
@@ -40,19 +41,26 @@ type TaskSequenceExecutionState struct {
 	InputEvent    keptnapimodels.KeptnContextExtendedCE // event that triggered the task sequence
 	Shipyard      keptnv2.Shipyard                      // in case the shipyard changes during the task sequence execution, keep it in the state
 	TaskSequence  keptnv2.Sequence                      // keep the taskSequence in the state as well, because retrieving it from the shipyard, based on the incoming event will get annoying otherwise
-	CurrentTask   TaskState
-	PreviousTasks []TaskState // TODO: should this be a map from stage to []TaskState?
+	CurrentTask   CurrentTask
+	PreviousTasks []TaskResult
+	Tasks         map[string][]TaskExecutor
 }
 
-type TaskState struct {
-	Name           string
-	TriggeredEvent keptnapimodels.KeptnContextExtendedCE
-	Executors      []TaskSequenceExecutor
+type CurrentTask struct {
+	TaskName    string
+	TriggeredID string
+}
+
+type TaskResult struct {
+	TaskName       string
 	FinishedEvents []keptnapimodels.KeptnContextExtendedCE
-	IsFinished     bool
 	Result         keptnv2.ResultType
 	Status         keptnv2.StatusType
-	Triggered      time.Time
+}
+
+type TaskExecutor struct {
+	ExecutorName string
+	TaskName     string
 }
 
 /*
@@ -88,7 +96,7 @@ func (sc *SimpleShipyardController) HandleIncomingEvent(event keptnapimodels.Kep
 }
 
 func (sc *SimpleShipyardController) handleTriggeredEvent(event keptnapimodels.KeptnContextExtendedCE) error {
-	if *event.Source == "shipyard-controller" {
+	if *event.ExecutorName == "shipyard-controller" {
 		sc.logger.Info("Received event from myself. Ignoring.")
 		return nil
 	}
@@ -100,9 +108,9 @@ func (sc *SimpleShipyardController) handleTriggeredEvent(event keptnapimodels.Ke
 		sc.logger.Error("Could not determine eventScope of event: " + err.Error())
 		return err
 	}
-	sc.logger.Info(fmt.Sprintf("Context of event %s, sent by %s: %s", *event.Type, *event.Source, handler.printObject(event)))
+	sc.logger.Info(fmt.Sprintf("Context of event %s, sent by %s: %s", *event.Type, *event.ExecutorName, handler.printObject(event)))
 
-	sc.logger.Info("received event of type " + *event.Type + " from " + *event.Source)
+	sc.logger.Info("received event of type " + *event.Type + " from " + *event.ExecutorName)
 	split := strings.Split(*event.Type, ".")
 
 	sc.logger.Info("Checking if .triggered event should start a sequence in project " + eventScope.Project)
@@ -141,8 +149,8 @@ func (sc *SimpleShipyardController) handleTriggeredEvent(event keptnapimodels.Ke
 		Stage:         stageName,
 		EventScope:    *eventScope,
 		Shipyard:      *shipyard,
-		CurrentTask:  TaskState{},
-		PreviousTasks: []TaskState{},
+		CurrentTask:  TaskExecutor{},
+		PreviousTasks: []TaskExecutor{},
 	}
 
 	if err := sc.TaskSequenceRepo.StoreTaskSequenceExecutionState(ts); err != nil {
@@ -153,20 +161,20 @@ func (sc *SimpleShipyardController) handleTriggeredEvent(event keptnapimodels.Ke
 
 func getTaskSequenceInStage(stageName, taskSequenceName string, shipyard *keptnv2.Shipyard) (*keptnv2.Sequence, error) {
 	for _, stage := range shipyard.Spec.Stages {
-		if stage.Name == stageName {
+		if stage.TaskName == stageName {
 			for _, taskSequence := range stage.Sequences {
-				if taskSequence.Name == taskSequenceName {
+				if taskSequence.TaskName == taskSequenceName {
 					return &taskSequence, nil
 				}
 			}
 			// provide built-in task sequence for evaluation
 			if taskSequenceName == keptnv2.EvaluationTaskName {
 				return &keptnv2.Sequence{
-					Name:        "evaluation",
+					TaskName:        "evaluation",
 					TriggeredOn: nil,
 					Tasks: []keptnv2.Task{
 						{
-							Name: keptnv2.EvaluationTaskName,
+							TaskName: keptnv2.EvaluationTaskName,
 						},
 					},
 				}, nil

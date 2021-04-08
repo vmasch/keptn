@@ -8,6 +8,6 @@ type GetStagesParams struct {
 	//The number of items to return
 	PageSize *int64 `form:"pageSize",json:nextPageKey""`
 
-	//Name of the project
+	//TaskName of the project
 	ProjectName string `form:"-"`
 }

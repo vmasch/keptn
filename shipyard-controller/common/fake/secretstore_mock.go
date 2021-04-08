@@ -53,24 +53,24 @@ type SecretStoreMock struct {
 	calls struct {
 		// CreateSecret holds details about calls to the CreateSecret method.
 		CreateSecret []struct {
-			// Name is the name argument value.
+			// TaskName is the name argument value.
 			Name string
 			// Content is the content argument value.
 			Content map[string][]byte
 		}
 		// DeleteSecret holds details about calls to the DeleteSecret method.
 		DeleteSecret []struct {
-			// Name is the name argument value.
+			// TaskName is the name argument value.
 			Name string
 		}
 		// GetSecret holds details about calls to the GetSecret method.
 		GetSecret []struct {
-			// Name is the name argument value.
+			// TaskName is the name argument value.
 			Name string
 		}
 		// UpdateSecret holds details about calls to the UpdateSecret method.
 		UpdateSecret []struct {
-			// Name is the name argument value.
+			// TaskName is the name argument value.
 			Name string
 			// Content is the content argument value.
 			Content map[string][]byte

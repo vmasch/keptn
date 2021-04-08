@@ -51,7 +51,7 @@ type GetProjectProjectNameParams struct {
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
 
-	//Name of the project
+	//TaskName of the project
 	ProjectName string
 }
 

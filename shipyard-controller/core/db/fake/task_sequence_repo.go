@@ -14,14 +14,14 @@ import (
 //
 // 		// make and configure a mocked db.ITaskSequenceExecutionStateRepo
 // 		mockedITaskSequenceExecutionStateRepo := &ITaskSequenceExecutionStateRepoMock{
-// 			GetTaskSequenceExecutionStateFunc: func(keptnContext string, stage string) (*state.TaskSequenceExecutionState, error) {
-// 				panic("mock out the GetTaskSequenceExecutionState method")
+// 			GetFunc: func(keptnContext string, triggeredID string, taskName string) (*state.TaskSequenceExecutionState, error) {
+// 				panic("mock out the Get method")
 // 			},
-// 			StoreTaskSequenceExecutionStateFunc: func(stateMoqParam state.TaskSequenceExecutionState) error {
-// 				panic("mock out the StoreTaskSequenceExecutionState method")
+// 			StoreFunc: func(stateMoqParam state.TaskSequenceExecutionState) error {
+// 				panic("mock out the Store method")
 // 			},
-// 			UpdateTaskSequenceExecutionStateFunc: func(stateMoqParam state.TaskSequenceExecutionState) error {
-// 				panic("mock out the UpdateTaskSequenceExecutionState method")
+// 			UpdateFunc: func(stateMoqParam state.TaskSequenceExecutionState) error {
+// 				panic("mock out the Update method")
 // 			},
 // 		}
 //
@@ -30,133 +30,139 @@ import (
 //
 // 	}
 type ITaskSequenceExecutionStateRepoMock struct {
-	// GetTaskSequenceExecutionStateFunc mocks the GetTaskSequenceExecutionState method.
-	GetTaskSequenceExecutionStateFunc func(keptnContext string, stage string) (*state.TaskSequenceExecutionState, error)
+	// GetFunc mocks the Get method.
+	GetFunc func(keptnContext string, triggeredID string, taskName string) (*state.TaskSequenceExecutionState, error)
 
-	// StoreTaskSequenceExecutionStateFunc mocks the StoreTaskSequenceExecutionState method.
-	StoreTaskSequenceExecutionStateFunc func(stateMoqParam state.TaskSequenceExecutionState) error
+	// StoreFunc mocks the Store method.
+	StoreFunc func(stateMoqParam state.TaskSequenceExecutionState) error
 
-	// UpdateTaskSequenceExecutionStateFunc mocks the UpdateTaskSequenceExecutionState method.
-	UpdateTaskSequenceExecutionStateFunc func(stateMoqParam state.TaskSequenceExecutionState) error
+	// UpdateFunc mocks the Update method.
+	UpdateFunc func(stateMoqParam state.TaskSequenceExecutionState) error
 
 	// calls tracks calls to the methods.
 	calls struct {
-		// GetTaskSequenceExecutionState holds details about calls to the GetTaskSequenceExecutionState method.
-		GetTaskSequenceExecutionState []struct {
+		// Get holds details about calls to the Get method.
+		Get []struct {
 			// KeptnContext is the keptnContext argument value.
 			KeptnContext string
-			// Stage is the stage argument value.
-			Stage string
+			// TriggeredID is the triggeredID argument value.
+			TriggeredID string
+			// TaskName is the taskName argument value.
+			TaskName string
 		}
-		// StoreTaskSequenceExecutionState holds details about calls to the StoreTaskSequenceExecutionState method.
-		StoreTaskSequenceExecutionState []struct {
+		// Store holds details about calls to the Store method.
+		Store []struct {
 			// StateMoqParam is the stateMoqParam argument value.
 			StateMoqParam state.TaskSequenceExecutionState
 		}
-		// UpdateTaskSequenceExecutionState holds details about calls to the UpdateTaskSequenceExecutionState method.
-		UpdateTaskSequenceExecutionState []struct {
+		// Update holds details about calls to the Update method.
+		Update []struct {
 			// StateMoqParam is the stateMoqParam argument value.
 			StateMoqParam state.TaskSequenceExecutionState
 		}
 	}
-	lockGetTaskSequenceExecutionState    sync.RWMutex
-	lockStoreTaskSequenceExecutionState  sync.RWMutex
-	lockUpdateTaskSequenceExecutionState sync.RWMutex
+	lockGet    sync.RWMutex
+	lockStore  sync.RWMutex
+	lockUpdate sync.RWMutex
 }
 
-// GetTaskSequenceExecutionState calls GetTaskSequenceExecutionStateFunc.
-func (mock *ITaskSequenceExecutionStateRepoMock) GetTaskSequenceExecutionState(keptnContext string, stage string) (*state.TaskSequenceExecutionState, error) {
-	if mock.GetTaskSequenceExecutionStateFunc == nil {
-		panic("ITaskSequenceExecutionStateRepoMock.GetTaskSequenceExecutionStateFunc: method is nil but ITaskSequenceExecutionStateRepo.GetTaskSequenceExecutionState was just called")
+// Get calls GetFunc.
+func (mock *ITaskSequenceExecutionStateRepoMock) Get(keptnContext string, triggeredID string, taskName string) (*state.TaskSequenceExecutionState, error) {
+	if mock.GetFunc == nil {
+		panic("ITaskSequenceExecutionStateRepoMock.GetFunc: method is nil but ITaskSequenceExecutionStateRepo.Get was just called")
 	}
 	callInfo := struct {
 		KeptnContext string
-		Stage        string
+		TriggeredID  string
+		TaskName     string
 	}{
 		KeptnContext: keptnContext,
-		Stage:        stage,
+		TriggeredID:  triggeredID,
+		TaskName:     taskName,
 	}
-	mock.lockGetTaskSequenceExecutionState.Lock()
-	mock.calls.GetTaskSequenceExecutionState = append(mock.calls.GetTaskSequenceExecutionState, callInfo)
-	mock.lockGetTaskSequenceExecutionState.Unlock()
-	return mock.GetTaskSequenceExecutionStateFunc(keptnContext, stage)
+	mock.lockGet.Lock()
+	mock.calls.Get = append(mock.calls.Get, callInfo)
+	mock.lockGet.Unlock()
+	return mock.GetFunc(keptnContext, triggeredID, taskName)
 }
 
-// GetTaskSequenceExecutionStateCalls gets all the calls that were made to GetTaskSequenceExecutionState.
+// GetCalls gets all the calls that were made to Get.
 // Check the length with:
-//     len(mockedITaskSequenceExecutionStateRepo.GetTaskSequenceExecutionStateCalls())
-func (mock *ITaskSequenceExecutionStateRepoMock) GetTaskSequenceExecutionStateCalls() []struct {
+//     len(mockedITaskSequenceExecutionStateRepo.GetCalls())
+func (mock *ITaskSequenceExecutionStateRepoMock) GetCalls() []struct {
 	KeptnContext string
-	Stage        string
+	TriggeredID  string
+	TaskName     string
 } {
 	var calls []struct {
 		KeptnContext string
-		Stage        string
+		TriggeredID  string
+		TaskName     string
 	}
-	mock.lockGetTaskSequenceExecutionState.RLock()
-	calls = mock.calls.GetTaskSequenceExecutionState
-	mock.lockGetTaskSequenceExecutionState.RUnlock()
+	mock.lockGet.RLock()
+	calls = mock.calls.Get
+	mock.lockGet.RUnlock()
 	return calls
 }
 
-// StoreTaskSequenceExecutionState calls StoreTaskSequenceExecutionStateFunc.
-func (mock *ITaskSequenceExecutionStateRepoMock) StoreTaskSequenceExecutionState(stateMoqParam state.TaskSequenceExecutionState) error {
-	if mock.StoreTaskSequenceExecutionStateFunc == nil {
-		panic("ITaskSequenceExecutionStateRepoMock.StoreTaskSequenceExecutionStateFunc: method is nil but ITaskSequenceExecutionStateRepo.StoreTaskSequenceExecutionState was just called")
+// Store calls StoreFunc.
+func (mock *ITaskSequenceExecutionStateRepoMock) Store(stateMoqParam state.TaskSequenceExecutionState) error {
+	if mock.StoreFunc == nil {
+		panic("ITaskSequenceExecutionStateRepoMock.StoreFunc: method is nil but ITaskSequenceExecutionStateRepo.Store was just called")
 	}
 	callInfo := struct {
 		StateMoqParam state.TaskSequenceExecutionState
 	}{
 		StateMoqParam: stateMoqParam,
 	}
-	mock.lockStoreTaskSequenceExecutionState.Lock()
-	mock.calls.StoreTaskSequenceExecutionState = append(mock.calls.StoreTaskSequenceExecutionState, callInfo)
-	mock.lockStoreTaskSequenceExecutionState.Unlock()
-	return mock.StoreTaskSequenceExecutionStateFunc(stateMoqParam)
+	mock.lockStore.Lock()
+	mock.calls.Store = append(mock.calls.Store, callInfo)
+	mock.lockStore.Unlock()
+	return mock.StoreFunc(stateMoqParam)
 }
 
-// StoreTaskSequenceExecutionStateCalls gets all the calls that were made to StoreTaskSequenceExecutionState.
+// StoreCalls gets all the calls that were made to Store.
 // Check the length with:
-//     len(mockedITaskSequenceExecutionStateRepo.StoreTaskSequenceExecutionStateCalls())
-func (mock *ITaskSequenceExecutionStateRepoMock) StoreTaskSequenceExecutionStateCalls() []struct {
+//     len(mockedITaskSequenceExecutionStateRepo.StoreCalls())
+func (mock *ITaskSequenceExecutionStateRepoMock) StoreCalls() []struct {
 	StateMoqParam state.TaskSequenceExecutionState
 } {
 	var calls []struct {
 		StateMoqParam state.TaskSequenceExecutionState
 	}
-	mock.lockStoreTaskSequenceExecutionState.RLock()
-	calls = mock.calls.StoreTaskSequenceExecutionState
-	mock.lockStoreTaskSequenceExecutionState.RUnlock()
+	mock.lockStore.RLock()
+	calls = mock.calls.Store
+	mock.lockStore.RUnlock()
 	return calls
 }
 
-// UpdateTaskSequenceExecutionState calls UpdateTaskSequenceExecutionStateFunc.
-func (mock *ITaskSequenceExecutionStateRepoMock) UpdateTaskSequenceExecutionState(stateMoqParam state.TaskSequenceExecutionState) error {
-	if mock.UpdateTaskSequenceExecutionStateFunc == nil {
-		panic("ITaskSequenceExecutionStateRepoMock.UpdateTaskSequenceExecutionStateFunc: method is nil but ITaskSequenceExecutionStateRepo.UpdateTaskSequenceExecutionState was just called")
+// Update calls UpdateFunc.
+func (mock *ITaskSequenceExecutionStateRepoMock) Update(stateMoqParam state.TaskSequenceExecutionState) error {
+	if mock.UpdateFunc == nil {
+		panic("ITaskSequenceExecutionStateRepoMock.UpdateFunc: method is nil but ITaskSequenceExecutionStateRepo.Update was just called")
 	}
 	callInfo := struct {
 		StateMoqParam state.TaskSequenceExecutionState
 	}{
 		StateMoqParam: stateMoqParam,
 	}
-	mock.lockUpdateTaskSequenceExecutionState.Lock()
-	mock.calls.UpdateTaskSequenceExecutionState = append(mock.calls.UpdateTaskSequenceExecutionState, callInfo)
-	mock.lockUpdateTaskSequenceExecutionState.Unlock()
-	return mock.UpdateTaskSequenceExecutionStateFunc(stateMoqParam)
+	mock.lockUpdate.Lock()
+	mock.calls.Update = append(mock.calls.Update, callInfo)
+	mock.lockUpdate.Unlock()
+	return mock.UpdateFunc(stateMoqParam)
 }
 
-// UpdateTaskSequenceExecutionStateCalls gets all the calls that were made to UpdateTaskSequenceExecutionState.
+// UpdateCalls gets all the calls that were made to Update.
 // Check the length with:
-//     len(mockedITaskSequenceExecutionStateRepo.UpdateTaskSequenceExecutionStateCalls())
-func (mock *ITaskSequenceExecutionStateRepoMock) UpdateTaskSequenceExecutionStateCalls() []struct {
+//     len(mockedITaskSequenceExecutionStateRepo.UpdateCalls())
+func (mock *ITaskSequenceExecutionStateRepoMock) UpdateCalls() []struct {
 	StateMoqParam state.TaskSequenceExecutionState
 } {
 	var calls []struct {
 		StateMoqParam state.TaskSequenceExecutionState
 	}
-	mock.lockUpdateTaskSequenceExecutionState.RLock()
-	calls = mock.calls.UpdateTaskSequenceExecutionState
-	mock.lockUpdateTaskSequenceExecutionState.RUnlock()
+	mock.lockUpdate.RLock()
+	calls = mock.calls.Update
+	mock.lockUpdate.RUnlock()
 	return calls
 }

@@ -157,7 +157,7 @@ func TestGetProjectByName(t *testing.T) {
 		projectNameParam   string
 	}{
 		{
-			name: "Get Project By Name DB access fails",
+			name: "Get Project By TaskName DB access fails",
 			fields: fields{
 				ProjectManager: &fake.IProjectManagerMock{
 					GetByNameFunc: func(projectName string) (*models.ExpandedProject, error) {
@@ -170,7 +170,7 @@ func TestGetProjectByName(t *testing.T) {
 			projectNameParam: "my-project",
 		},
 		{
-			name: "Get Project By Name project not found",
+			name: "Get Project By TaskName project not found",
 			fields: fields{
 				ProjectManager: &fake.IProjectManagerMock{
 					GetByNameFunc: func(projectName string) (*models.ExpandedProject, error) {
@@ -183,7 +183,7 @@ func TestGetProjectByName(t *testing.T) {
 			projectNameParam: "my-project",
 		},
 		{
-			name: "Get Project By Name",
+			name: "Get Project By TaskName",
 			fields: fields{
 				ProjectManager: &fake.IProjectManagerMock{
 					GetByNameFunc: func(projectName string) (*models.ExpandedProject, error) {

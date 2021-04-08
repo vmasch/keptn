@@ -66,25 +66,6 @@ func getFakeTaskSequenceRepo() *fake.ITaskSequenceExecutionStateRepoMock {
 
 func getDeliveryTriggeredEvent() models.KeptnContextExtendedCE {
 	return models.KeptnContextExtendedCE{
-		Data: keptnv2.EventData{
-			Project: "my-project",
-			Stage:   "dev",
-			Service: "my-service",
-			Labels: map[string]string{
-				"foo": "bar",
-			},
-		},
-		ID:                 "my-id",
-		Shkeptncontext:     "my-context",
-		Shkeptnspecversion: "0.2.0",
-		Source:             common.Stringp("my-source"),
-		Specversion:        "1.0",
-		Type:               common.Stringp("sh.keptn.event.dev.delivery.triggered"),
-	}
-}
-
-func getDeploymentTriggeredEvent() models.KeptnContextExtendedCE {
-	return models.KeptnContextExtendedCE{
 		Data: keptnv2.DeploymentTriggeredEventData{
 			EventData: keptnv2.EventData{
 				Project: "my-project",
@@ -94,13 +75,16 @@ func getDeploymentTriggeredEvent() models.KeptnContextExtendedCE {
 					"foo": "bar",
 				},
 			},
+			ConfigurationChange: keptnv2.ConfigurationChange{Values: map[string]interface{}{
+				"foo": "bar",
+			}},
 		},
 		ID:                 "my-id",
 		Shkeptncontext:     "my-context",
-		Shkeptnspecversion: "0.2.0",
+		Shkeptnspecversion: common.GetKeptnSpecVersion(),
 		Source:             common.Stringp("my-source"),
 		Specversion:        "1.0",
-		Type:               common.Stringp(keptnv2.GetTriggeredEventType(keptnv2.DeploymentTaskName)),
+		Type:               common.Stringp("sh.keptn.event.dev.delivery.triggered"),
 	}
 }
 
@@ -112,8 +96,8 @@ func getEventWithPayload(eventType string, data map[string]interface{}) models.K
 		ID:                 "my-id",
 		Contenttype:        "application/json",
 		Shkeptncontext:     "my-context",
-		Shkeptnspecversion: "0.2.0",
-		Source:             common.Stringp("my-source"),
+		Shkeptnspecversion: common.GetKeptnSpecVersion(),
+		Source:             common.Stringp("shipyard-controller"),
 		Specversion:        "1.0",
 		Type:               common.Stringp(eventType),
 	}
@@ -143,12 +127,38 @@ func TestEngine_SetState(t *testing.T) {
 				ShipyardRepo:     getFakeShipyardRepo(simpleShipyard),
 			},
 			args: args{
-				event: getDeliveryTriggeredEvent(),
+				event: getEventWithPayload("sh.keptn.event.dev.delivery.triggered", map[string]interface{}{
+					"stage": "dev",
+					"labels": map[string]interface{}{
+						"foo": "bar",
+					},
+					"deployment": map[string]interface{}{
+						"deploymentstrategy": "direct",
+					},
+					"configurationChange": map[string]interface{}{
+						"values": map[string]interface{}{
+							"foo": "bar",
+						},
+					},
+				}),
 			},
 			expectState: state.TaskSequenceExecutionState{
-				Status:       state.TaskSequenceTriggered,
-				Triggered:    time.Now().Round(time.Minute),
-				InputEvent:   getDeliveryTriggeredEvent(),
+				Status:    state.TaskSequenceTriggered,
+				Triggered: time.Now().Round(time.Minute),
+				InputEvent: getEventWithPayload("sh.keptn.event.dev.delivery.triggered", map[string]interface{}{
+					"stage": "dev",
+					"labels": map[string]interface{}{
+						"foo": "bar",
+					},
+					"deployment": map[string]interface{}{
+						"deploymentstrategy": "direct",
+					},
+					"configurationChange": map[string]interface{}{
+						"values": map[string]interface{}{
+							"foo": "bar",
+						},
+					},
+				}),
 				TaskSequence: getDeliveryTaskSequence(),
 				CurrentTask: state.TaskState{
 					Name: "deployment",
@@ -161,7 +171,9 @@ func TestEngine_SetState(t *testing.T) {
 							"deploymentstrategy": "direct",
 						},
 						"configurationChange": map[string]interface{}{
-							"values": "my-values",
+							"values": map[string]interface{}{
+								"foo": "bar",
+							},
 						},
 					}),
 					Executors:      nil,
@@ -191,9 +203,12 @@ func TestEngine_SetState(t *testing.T) {
 				t.Errorf("SetState() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
-			// ignore started
-			e.State.Triggered = e.State.Triggered.Round(time.Minute)
-			assert.Equal(t, e.State, tt.expectState)
+			// ignore generated properties
+			e.State.Triggered = tt.expectState.Triggered // ignore timestamp
+			e.State.CurrentTask.Triggered = tt.expectState.CurrentTask.Triggered
+			e.State.CurrentTask.TriggeredEvent.ID = tt.expectState.CurrentTask.TriggeredEvent.ID
+
+			assert.Equal(t, tt.expectState, e.State)
 		})
 	}
 }

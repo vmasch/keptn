@@ -8,6 +8,7 @@ import (
 	"github.com/keptn/keptn/shipyard-controller/common"
 	"github.com/keptn/keptn/shipyard-controller/core/db"
 	"github.com/keptn/keptn/shipyard-controller/core/state"
+	"strings"
 	"time"
 )
 
@@ -36,58 +37,18 @@ func (e *Engine) Pause() error {
 
 func (e *Engine) SetState(event keptnapimodels.KeptnContextExtendedCE) error {
 
-	//split := strings.Split(*event.Type, ".")
-	//
-	//statusType := split[len(split)-1]
-	//
-	//eventData := &keptnv2.EventData{}
-	//err := keptnv2.Decode(event.Data, eventData)
-	//if err != nil {
-	//	sc.logger.Error("Could not parse event data: " + err.Error())
-	//	return err
-	//}
-	//
-	//switch statusType {
-	//case string(common.TriggeredEvent):
-	//	return sc.handleTriggeredEvent(event)
-	//case string(common.StartedEvent):
-	//	return sc.handleStartedEvent(event)
-	//case string(common.FinishedEvent):
-	//	return sc.handleFinishedEvent(event)
-	//default:
-	//	return nil
-	//}
+	statusType := getEventStatusType(*event.Type)
 
-	eventScope := &keptnv2.EventData{}
-	if err := keptnv2.Decode(event.Data, eventScope); err != nil {
-		// TODO handle error
-		return err
+	switch statusType {
+	case string(common.TriggeredEvent):
+		return e.handleTriggeredEvent(event)
+	case string(common.StartedEvent):
+		return e.handleStartedEvent(event)
+	case string(common.FinishedEvent):
+		return e.handleFinishedEvent(event)
+	default:
+		return nil
 	}
-	// triggered? <stage>.<sequence>.<triggered>?
-	shipyard, err := e.ShipyardRepo.Sync(eventScope.GetProject())
-	if err != nil {
-		return err
-	}
-
-	taskSequence, err := e.ShipyardRepo.GetTaskSequence(*event.Type)
-	if err != nil {
-		return err
-	}
-
-	newState, err := state.NewTaskSequenceExecutionState(event, *shipyard, *taskSequence)
-	if err != nil {
-		return err
-	}
-	e.State = *newState
-
-	if len(e.State.TaskSequence.Tasks) > 0 {
-		firstTask := e.State.TaskSequence.Tasks[0]
-		e.State.CurrentTask.Name = firstTask.Name
-		e.State.CurrentTask.Triggered = time.Now()
-		e.State.CurrentTask.TriggeredEvent = keptnapimodels.KeptnContextExtendedCE{} // TODO: merge payload of task input event with properties of task
-	}
-
-	e.State = DeriveNextTriggeredEvent(e.State)
 
 	// get first task of sequence
 
@@ -102,9 +63,22 @@ func (e *Engine) SetState(event keptnapimodels.KeptnContextExtendedCE) error {
 	return nil
 }
 
+func getEventStatusType(eventType string) string {
+	split := strings.Split(eventType, ".")
+
+	statusType := split[len(split)-1]
+
+	return statusType
+}
+
 func DeriveNextTriggeredEvent(ts state.TaskSequenceExecutionState) state.TaskSequenceExecutionState {
 	// merge inputEvent, previous finished events and properties of next task
-	mergedPayload := ts.InputEvent.Data
+	var mergedPayload interface{}
+	inputDataMap := map[string]interface{}{}
+	if err := keptnv2.Decode(ts.InputEvent.Data, &inputDataMap); err != nil {
+		return ts
+	}
+	mergedPayload = common.Merge(mergedPayload, inputDataMap)
 	for _, task := range ts.PreviousTasks {
 		for _, finishedEvent := range task.FinishedEvents {
 			mergedPayload = common.Merge(mergedPayload, finishedEvent.Data)
@@ -152,4 +126,53 @@ func (e *Engine) ExecuteState() error {
 
 func (e *Engine) PersistState() error {
 	return e.TaskSequenceRepo.StoreTaskSequenceExecutionState(e.State)
+}
+
+func (e *Engine) handleTriggeredEvent(event keptnapimodels.KeptnContextExtendedCE) error {
+	eventScope := &keptnv2.EventData{}
+	if err := keptnv2.Decode(event.Data, eventScope); err != nil {
+		// TODO handle error
+		return err
+	}
+	// triggered? <stage>.<sequence>.<triggered>?
+	shipyard, err := e.ShipyardRepo.Sync(eventScope.GetProject())
+	if err != nil {
+		return err
+	}
+
+	taskSequence, err := e.ShipyardRepo.GetTaskSequence(*event.Type)
+	if err != nil {
+		return err
+	}
+
+	newState, err := state.NewTaskSequenceExecutionState(event, *shipyard, *taskSequence)
+	if err != nil {
+		return err
+	}
+	e.State = *newState
+
+	if len(e.State.TaskSequence.Tasks) > 0 {
+		firstTask := e.State.TaskSequence.Tasks[0]
+		e.State.CurrentTask.Name = firstTask.Name
+		e.State.CurrentTask.Triggered = time.Now()
+		e.State.CurrentTask.TriggeredEvent = keptnapimodels.KeptnContextExtendedCE{} // TODO: merge payload of task input event with properties of task
+	}
+
+	e.State = DeriveNextTriggeredEvent(e.State)
+	return nil
+}
+
+func (e *Engine) handleStartedEvent(event keptnapimodels.KeptnContextExtendedCE) error {
+	// event.Shkeptncontext
+	//event.Shkeptncontext
+	//event.Triggeredid
+	//event.Type // -> task name
+
+	// TODO lock for given shkeptncontext
+	//e.TaskSequenceRepo.GetTaskSequenceExecutionState()
+	return nil
+}
+
+func (e *Engine) handleFinishedEvent(event keptnapimodels.KeptnContextExtendedCE) error {
+	return nil
 }

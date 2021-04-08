@@ -20,19 +20,27 @@ type TaskSequenceExecutor struct {
 	Name string // the source of the service that sent a .started event
 }
 
-func NewTaskSequenceExecutionState(event keptnapimodels.KeptnContextExtendedCE, shipyard keptnv2.Shipyard, sequence keptnv2.Sequence) (*TaskSequenceExecutionState, error) {
-	ts := &TaskSequenceExecutionState{
+func NewTaskSequenceExecutionState(event keptnapimodels.KeptnContextExtendedCE, shipyard keptnv2.Shipyard, sequence keptnv2.Sequence) TaskSequenceExecutionState {
+
+	ts := TaskSequenceExecutionState{
 		Status:        TaskSequenceTriggered,
 		Triggered:     time.Now(),
 		InputEvent:    event,
 		Shipyard:      shipyard,
 		TaskSequence:  sequence,
 		CurrentTask:   CurrentTask{},
-		PreviousTasks: nil,
-		Tasks:         nil,
+		PreviousTasks: []TaskResult{},
+		Tasks:         map[string][]TaskExecutor{},
 	}
 
-	return ts, nil
+	if len(sequence.Tasks) > 0 {
+		ts.CurrentTask = CurrentTask{
+			TaskName:    sequence.Tasks[0].Name,
+			TriggeredID: "NEW_ID",
+		}
+	}
+
+	return ts
 }
 
 type TaskSequenceExecutionState struct {

@@ -133,25 +133,14 @@ func (e *Engine) handleTriggeredEvent(event keptnapimodels.KeptnContextExtendedC
 		return err
 	}
 
-	newState, err := state.NewTaskSequenceExecutionState(event, *shipyard, *taskSequence)
-	if err != nil {
-		return err
-	}
-
-	if len(newState.TaskSequence.Tasks) > 0 {
-		firstTask := newState.TaskSequence.Tasks[0]
-		newState.CurrentTask.TaskName = firstTask.Name
-		newState.CurrentTask.TriggeredID = "NEW_ID" //TODO: generate ID
-	}
-
-	e.State = *newState
+	e.State = state.NewTaskSequenceExecutionState(event, *shipyard, *taskSequence)
 
 	return nil
 }
 
 func (e *Engine) handleStartedEvent(event keptnapimodels.KeptnContextExtendedCE) error {
 
-	taskName := *event.Type //TODO: this is worng, extract task name from type
+	taskName := *event.Type //TODO: this is wrong, extract task name from type
 
 	// 1. Get current State
 	currentExecutionState, err := e.TaskSequenceRepo.Get(event.Shkeptncontext, "", taskName)

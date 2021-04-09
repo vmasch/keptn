@@ -101,6 +101,8 @@ func (e *Engine) ExecuteState() error {
 		return err
 	}
 
+	// TODO: if a waitTime has been specified, wait before sending the event
+	// TODO: send the event
 	_ = event
 	//switch e.State.Status {
 	//case state.TaskSequenceTriggered:
@@ -143,6 +145,7 @@ func (e *Engine) handleStartedEvent(event keptnapimodels.KeptnContextExtendedCE)
 	taskName := *event.Type //TODO: this is wrong, extract task name from type
 
 	// 1. Get current State
+	// TODO: we need a lock for the sequence execution state
 	currentExecutionState, err := e.TaskSequenceRepo.Get(event.Shkeptncontext, "", taskName)
 	if err != nil {
 		return err
@@ -163,6 +166,7 @@ func (e *Engine) handleFinishedEvent(event keptnapimodels.KeptnContextExtendedCE
 	taskName := *event.Type // TODO: this is wrong, extract task name from type
 	source := *event.Source
 
+	// TODO: consider out of order events
 	// 1. Get current State
 	currentExecutionState, err := e.TaskSequenceRepo.Get(event.Shkeptncontext, "", taskName)
 	if err != nil {
@@ -180,7 +184,8 @@ func (e *Engine) handleFinishedEvent(event keptnapimodels.KeptnContextExtendedCE
 		currentExecutionState.Tasks[taskName] = tmp
 	}
 
-	// 3. if no more task is stored --> Update Sequence Execution State and trigger next sequence
+	// 3. if no more task is stored --> Update Sequence Execution State and check if next task is available
+	// if there are no further tasks in the sequence, trigger next sequence(s)
 
 	return nil
 }

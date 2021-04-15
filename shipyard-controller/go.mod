@@ -3,7 +3,6 @@ module github.com/keptn/keptn/shipyard-controller
 go 1.13
 
 require (
-	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869
 	github.com/cloudevents/sdk-go/v2 v2.3.1
 	github.com/ghodss/yaml v1.0.0
 	github.com/gin-gonic/gin v1.6.3
@@ -15,7 +14,7 @@ require (
 	github.com/go-test/deep v1.0.7
 	github.com/google/uuid v1.2.0
 	github.com/jeremywohl/flatten v0.0.0-20190921043622-d936035e55cf
-	github.com/keptn/go-utils v0.8.3-0.20210408080022-61c1d2d0bfc8
+	github.com/keptn/go-utils v0.8.3-0.20210409085842-9c097a48bd12
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/onsi/ginkgo v1.12.0 // indirect

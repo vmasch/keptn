@@ -103,13 +103,13 @@ func getEventWithPayload(eventType string, data map[string]interface{}) models.K
 	}
 }
 
-func Test_Receive_StartedEvent(t *testing.T) {
+func Test_ProcessTaskStartedAndFinishedEvent(t *testing.T) {
 
-	stateRepo := &fake.ITaskSequenceExecutionStateRepoMock{}
+	stateRepo := &db.InMemoryTaskSequenceStateRepo{}
 	shipyardRepo := getFakeShipyardRepo(simpleShipyard)
 
 	engine := engine.Engine{
-		State:            state.TaskSequenceExecutionState{},
+		State:            &state.TaskSequenceExecutionState{},
 		TaskSequenceRepo: stateRepo,
 		ShipyardRepo:     shipyardRepo,
 	}
@@ -119,33 +119,35 @@ func Test_Receive_StartedEvent(t *testing.T) {
 		StateRepo: stateRepo,
 	}
 
-	sequenceTriggeredEvent := eventutils.KeptnEvent("delivery.triggered", keptnv2.EventData{
+	sequenceTriggeredEvent, _ := eventutils.KeptnEvent(keptnv2.GetTriggeredEventType("deployment"), keptnv2.EventData{
 		Project: "my-project",
 		Stage:   "my-stage",
-		Service: "my-service",
-	}).Build()
+		Service: "my-service"}).
+		WithID("ID1").
+		WithSource("cli").
+		Build()
 
-	taskStartedEvent := eventutils.KeptnEvent("deployment.started", keptnv2.EventData{
+	taskStartedEvent, _ := eventutils.KeptnEvent(keptnv2.GetStartedEventType("deployment"), keptnv2.EventData{
 		Project: "my-project",
 		Stage:   "my-stage",
-		Service: "my-service",
-	}).Build()
+		Service: "my-service"}).
+		WithID("ID2").
+		WithTriggeredID("ID1").
+		WithSource("helm-service").
+		Build()
 
-	// TRIGGERED EVENT
-	engineTester.NewEvent(sequenceTriggeredEvent)
-	//TODO: verify state
-	engineTester.Execute()
-	//TODO: verify state
-	engineTester.Persist()
-	//TODO: verify state
+	taskFinishedEvent, _ := eventutils.KeptnEvent(keptnv2.GetFinishedEventType("deployment"), keptnv2.EventData{
+		Project: "my-project",
+		Stage:   "my-stage",
+		Service: "my-service"}).
+		WithID("ID3").
+		WithTriggeredID("ID1").
+		WithSource("helm-service").
+		Build()
 
-	// STARTED EVENT
-	engineTester.NewEvent(taskStartedEvent)
-	//TODO: verify state
-	engineTester.Execute()
-	//TODO: verify state
-	engineTester.Persist()
-	//TODO: verify state
+	engineTester.NewSequenceTriggeredEvent(sequenceTriggeredEvent)
+	engineTester.NewTaskStartedEvent(taskStartedEvent)
+	engineTester.NewTaskFinishedEvent(taskFinishedEvent)
 
 }
 
@@ -154,267 +156,35 @@ type EngineTester struct {
 	StateRepo db.ITaskSequenceExecutionStateRepo
 }
 
-func (e EngineTester) NewEvent(event models.KeptnContextExtendedCE) {
-	e.Engine.SetState(event)
+func (e *EngineTester) SequenceTriggered(event models.KeptnContextExtendedCE) error {
+	panic("implement me")
 }
 
-func (e EngineTester) Persist() {
-	e.Engine.PersistState()
+func (e *EngineTester) TaskStarted(event models.KeptnContextExtendedCE) error {
+	panic("implement me")
 }
 
-func (e EngineTester) Execute() {
-	e.Engine.ExecuteState()
+func (e *EngineTester) TaskFinished(event models.KeptnContextExtendedCE) error {
+	panic("implement me")
 }
 
-func (e EngineTester) VerifyState(keptnContext, triggeredID, taskName string, state state.TaskSequenceExecutionState) bool {
+func (e *EngineTester) NewSequenceTriggeredEvent(event models.KeptnContextExtendedCE) {
+	e.Engine.SequenceTriggered(event)
+}
+
+func (e *EngineTester) NewTaskStartedEvent(event models.KeptnContextExtendedCE) {
+	e.Engine.TaskStarted(event)
+}
+
+func (e *EngineTester) NewTaskFinishedEvent(event models.KeptnContextExtendedCE) {
+	e.Engine.TaskFinished(event)
+}
+
+func (e *EngineTester) VerifyState(keptnContext, triggeredID, taskName string, state state.TaskSequenceExecutionState) bool {
 	executionState, _ := e.StateRepo.Get(keptnContext, triggeredID, taskName)
 	_ = executionState
 	return true
 }
-
-//##################
-
-//func TestEngine_SetState(t *testing.T) {
-//	type fields struct {
-//		state            state.TaskSequenceExecutionState
-//		TaskSequenceRepo *fake.ITaskSequenceExecutionStateRepoMock
-//		ShipyardRepo     *fake2.IShipyardRepoMock
-//	}
-//	type args struct {
-//		event models.KeptnContextExtendedCE
-//	}
-//	tests := []struct {
-//		name        string
-//		fields      fields
-//		args        args
-//		expectState state.TaskSequenceExecutionState
-//		wantErr     bool
-//	}{
-//		{
-//			name: "start sequence",
-//			fields: fields{
-//				state:            state.TaskSequenceExecutionState{},
-//				TaskSequenceRepo: getFakeTaskSequenceRepo(),
-//				ShipyardRepo:     getFakeShipyardRepo(simpleShipyard),
-//			},
-//			args: args{
-//				event: getEventWithPayload("sh.keptn.event.dev.delivery.triggered", map[string]interface{}{
-//					"stage": "dev",
-//					"labels": map[string]interface{}{
-//						"foo": "bar",
-//					},
-//					"deployment": map[string]interface{}{
-//						"deploymentstrategy": "direct",
-//					},
-//					"configurationChange": map[string]interface{}{
-//						"values": map[string]interface{}{
-//							"foo": "bar",
-//						},
-//					},
-//				}),
-//			},
-//			expectState: state.TaskSequenceExecutionState{
-//				Status:    state.TaskSequenceTriggered,
-//				Triggered: time.Now().Round(time.Minute),
-//				InputEvent: getEventWithPayload("sh.keptn.event.dev.delivery.triggered", map[string]interface{}{
-//					"stage": "dev",
-//					"labels": map[string]interface{}{
-//						"foo": "bar",
-//					},
-//					"deployment": map[string]interface{}{
-//						"deploymentstrategy": "direct",
-//					},
-//					"configurationChange": map[string]interface{}{
-//						"values": map[string]interface{}{
-//							"foo": "bar",
-//						},
-//					},
-//				}),
-//				TaskSequence: getDeliveryTaskSequence(),
-//				CurrentTask: state.TaskExecutor{
-//					TaskName: "deployment",
-//					TriggeredEvent: getEventWithPayload(keptnv2.GetTriggeredEventType(keptnv2.DeploymentTaskName), map[string]interface{}{
-//						"stage": "dev",
-//						"labels": map[string]interface{}{
-//							"foo": "bar",
-//						},
-//						"deployment": map[string]interface{}{
-//							"deploymentstrategy": "direct",
-//						},
-//						"configurationChange": map[string]interface{}{
-//							"values": map[string]interface{}{
-//								"foo": "bar",
-//							},
-//						},
-//					}),
-//					Executors:      nil,
-//					FinishedEvents: nil,
-//					IsFinished:     false,
-//					Result:         "",
-//					Status:         "",
-//					Triggered:      time.Now().Round(time.Minute),
-//				},
-//				PreviousTasks: nil,
-//			},
-//			wantErr: false,
-//		},
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//
-//			shipyard, _ := keptnv2.DecodeShipyardYAML([]byte(simpleShipyard))
-//			tt.expectState.Shipyard = *shipyard
-//
-//			e := &engine.Engine{
-//				State:            tt.fields.state,
-//				TaskSequenceRepo: tt.fields.TaskSequenceRepo,
-//				ShipyardRepo:     tt.fields.ShipyardRepo,
-//			}
-//			if err := e.SetState(tt.args.event); (err != nil) != tt.wantErr {
-//				t.Errorf("SetState() error = %v, wantErr %v", err, tt.wantErr)
-//			}
-//
-//			// ignore generated properties
-//			e.State.Triggered = tt.expectState.Triggered // ignore timestamp
-//			e.State.CurrentTask.Triggered = tt.expectState.CurrentTask.Triggered
-//			e.State.CurrentTask.TriggeredEvent.ID = tt.expectState.CurrentTask.TriggeredEvent.ID
-//
-//			assert.Equal(t, tt.expectState, e.State)
-//		})
-//	}
-//}
-//
-//func TestDeriveNextTriggeredEvent(t *testing.T) {
-//	shipyard, _ := keptnv2.DecodeShipyardYAML([]byte(simpleShipyard))
-//
-//	type args struct {
-//		ts state.TaskSequenceExecutionState
-//	}
-//	tests := []struct {
-//		name               string
-//		args               args
-//		wantTriggeredEvent models.KeptnContextExtendedCE
-//	}{
-//		{
-//			name: "send initial triggered event",
-//			args: args{
-//				ts: state.TaskSequenceExecutionState{
-//					Status:    state.TaskSequenceTriggered,
-//					Triggered: time.Time{},
-//					InputEvent: getEventWithPayload(keptnv2.GetTriggeredEventType(keptnv2.DeploymentTaskName), map[string]interface{}{
-//						"stage": "dev",
-//						"labels": map[string]interface{}{
-//							"foo": "bar",
-//						},
-//						"configurationChange": map[string]interface{}{
-//							"values": "my-values",
-//						},
-//					}),
-//					Shipyard: *shipyard,
-//					TaskSequence: keptnv2.Sequence{
-//						TaskName: "",
-//						Tasks: []keptnv2.Task{
-//							{
-//								TaskName: "deployment",
-//								Properties: map[string]interface{}{
-//									"deploymentstrategy": "direct",
-//								},
-//							},
-//						},
-//					},
-//					CurrentTask: state.TaskExecutor{
-//						TaskName:       "deployment",
-//						IsFinished: false,
-//						Result:     "",
-//						Status:     "",
-//						Triggered:  time.Time{},
-//					},
-//					PreviousTasks: []state.TaskExecutor{},
-//				},
-//			},
-//			wantTriggeredEvent: getEventWithPayload(keptnv2.GetTriggeredEventType(keptnv2.DeploymentTaskName), map[string]interface{}{
-//				"stage": "dev",
-//				"labels": map[string]interface{}{
-//					"foo": "bar",
-//				},
-//				"deployment": map[string]interface{}{
-//					"deploymentstrategy": "direct",
-//				},
-//				"configurationChange": map[string]interface{}{
-//					"values": "my-values",
-//				},
-//			}),
-//		},
-//		{
-//			name: "send triggered event with properties from previous task.finished events",
-//			args: args{
-//				ts: state.TaskSequenceExecutionState{
-//					Status:    state.TaskSequenceTriggered,
-//					Triggered: time.Time{},
-//					InputEvent: getEventWithPayload(keptnv2.GetTriggeredEventType(keptnv2.DeploymentTaskName), map[string]interface{}{
-//						"stage": "dev",
-//						"labels": map[string]interface{}{
-//							"foo": "bar",
-//						},
-//						"configurationChange": map[string]interface{}{
-//							"values": "my-values",
-//						},
-//					}),
-//					Shipyard:     *shipyard,
-//					TaskSequence: getDeliveryTaskSequence(),
-//					CurrentTask: state.TaskExecutor{
-//						TaskName:       "test",
-//						IsFinished: false,
-//						Result:     "",
-//						Status:     "",
-//						Triggered:  time.Time{},
-//					},
-//					PreviousTasks: []state.TaskExecutor{
-//						{
-//							TaskName: "deployment",
-//							FinishedEvents: []models.KeptnContextExtendedCE{
-//								getEventWithPayload(keptnv2.GetFinishedEventType(keptnv2.DeploymentTaskName), map[string]interface{}{
-//									"deployment": map[string]interface{}{
-//										"deploymentURILocal": "my-url",
-//									},
-//								}),
-//							},
-//							Result: keptnv2.ResultPass,
-//							Status: keptnv2.StatusSucceeded,
-//						},
-//					},
-//				},
-//			},
-//			wantTriggeredEvent: getEventWithPayload(keptnv2.GetTriggeredEventType(keptnv2.TestTaskName), map[string]interface{}{
-//				"stage": "dev",
-//				"labels": map[string]interface{}{
-//					"foo": "bar",
-//				},
-//				"deployment": map[string]interface{}{
-//					"deploymentURILocal": "my-url",
-//				},
-//				"configurationChange": map[string]interface{}{
-//					"values": "my-values",
-//				},
-//				"test": map[string]interface{}{
-//					"teststrategy": "functional",
-//				},
-//			}),
-//		},
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			got := engine.DeriveNextTriggeredEvent(tt.args.ts)
-//
-//			gotMap := map[string]interface{}{}
-//
-//			if err := keptnv2.Decode(got.CurrentTask.TriggeredEvent.Data, &gotMap); err != nil {
-//				t.Errorf(err.Error())
-//			}
-//			assert.Equal(t, tt.wantTriggeredEvent.Data, gotMap)
-//		})
-//	}
-//}
 
 func getDeliveryTaskSequence() keptnv2.Sequence {
 	return keptnv2.Sequence{

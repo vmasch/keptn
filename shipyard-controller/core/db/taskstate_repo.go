@@ -9,7 +9,6 @@ import (
 type ITaskSequenceExecutionStateRepo interface {
 	Store(state state.TaskSequenceExecutionState) error
 	Get(keptnContext, triggeredID, taskName string) (*state.TaskSequenceExecutionState, error)
-	Update(state state.TaskSequenceExecutionState) error
 }
 
 type InMemoryTaskSequenceStateRepo struct {

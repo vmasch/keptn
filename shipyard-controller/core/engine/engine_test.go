@@ -58,9 +58,6 @@ func getFakeTaskSequenceRepo() *fake.ITaskSequenceExecutionStateRepoMock {
 		StoreFunc: func(stateMoqParam state.TaskSequenceExecutionState) error {
 			return nil
 		},
-		UpdateFunc: func(stateMoqParam state.TaskSequenceExecutionState) error {
-			return nil
-		},
 	}
 }
 
@@ -109,7 +106,6 @@ func Test_ProcessTaskStartedAndFinishedEvent(t *testing.T) {
 	shipyardRepo := getFakeShipyardRepo(simpleShipyard)
 
 	engine := engine.Engine{
-		State:            &state.TaskSequenceExecutionState{},
 		TaskSequenceRepo: stateRepo,
 		ShipyardRepo:     shipyardRepo,
 	}

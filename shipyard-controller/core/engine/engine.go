@@ -12,7 +12,7 @@ import (
 )
 
 type Engine struct {
-	State            *state.TaskSequenceExecutionState
+	//State            *state.TaskSequenceExecutionState
 	TaskSequenceRepo db.ITaskSequenceExecutionStateRepo
 	ShipyardRepo     IShipyardRepo
 	Clock            time.Time
@@ -37,15 +37,14 @@ func (e *Engine) SequenceTriggered(inEvent keptnapimodels.KeptnContextExtendedCE
 	}
 
 	// set new state
-	e.State = state.NewTaskSequenceExecutionState(inEvent, *shipyard, *taskSequence)
+	newState := state.NewTaskSequenceExecutionState(inEvent, *shipyard, *taskSequence)
 
 	// persist state
-	if err := e.TaskSequenceRepo.Store(*e.State); err != nil {
+	if err := e.TaskSequenceRepo.Store(*newState); err != nil {
 		return err
 	}
 
-	// send out neccessary event
-	outEvent, err := e.deriveNextEvent()
+	outEvent, err := e.deriveNextEvent(newState)
 	if err != nil {
 		return err
 	}
@@ -64,16 +63,21 @@ func (e *Engine) TaskStarted(event keptnapimodels.KeptnContextExtendedCE) error 
 		return fmt.Errorf("event has no source")
 	}
 
-	e.State, err = e.TaskSequenceRepo.Get(event.Shkeptncontext, event.Triggeredid, taskName)
+	currentState, err := e.TaskSequenceRepo.Get(event.Shkeptncontext, event.Triggeredid, taskName)
 	if err != nil {
 		return err
 	}
 
 	// update list of tasks
-	if _, ok := e.State.Tasks[taskName]; ok {
-		e.State.Tasks[taskName] = append(e.State.Tasks[taskName], state.TaskExecutor{})
+	if _, ok := currentState.Tasks[taskName]; ok {
+		currentState.Tasks[taskName] = append(currentState.Tasks[taskName], state.TaskExecutor{})
 	} else {
-		e.State.Tasks[taskName] = []state.TaskExecutor{{ExecutorName: *event.Source, TaskName: taskName}}
+		currentState.Tasks[taskName] = []state.TaskExecutor{{ExecutorName: *event.Source, TaskName: taskName}}
+	}
+
+	err = e.TaskSequenceRepo.Store(*currentState)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -86,30 +90,35 @@ func (e *Engine) TaskFinished(event keptnapimodels.KeptnContextExtendedCE) error
 		return err
 	}
 
-	e.State, err = e.TaskSequenceRepo.Get(event.Shkeptncontext, "", taskName)
+	currentState, err := e.TaskSequenceRepo.Get(event.Shkeptncontext, "", taskName)
 	if err != nil {
 		return err
 	}
 
-	nextEvent, err := e.deriveNextEvent()
+	// TODO: update currentState.Tasks accordingly
+	_ = currentState
+
+	nextEvent, err := e.deriveNextEvent(currentState)
 	if err != nil {
 		return err
 	}
 
 	_ = nextEvent
 
+	e.TaskSequenceRepo.Store(*currentState)
+
 	return nil
 }
 
-func (e *Engine) deriveNextEvent() (*keptnapimodels.KeptnContextExtendedCE, error) {
+func (e *Engine) deriveNextEvent(state *state.TaskSequenceExecutionState) (*keptnapimodels.KeptnContextExtendedCE, error) {
 	// merge inputEvent, previous finished events and properties of next task
 	var mergedPayload interface{}
 	inputDataMap := map[string]interface{}{}
-	if err := keptnv2.Decode(e.State.InputEvent.Data, &inputDataMap); err != nil {
+	if err := keptnv2.Decode(state.InputEvent.Data, &inputDataMap); err != nil {
 		return nil, err
 	}
 	mergedPayload = common.Merge(mergedPayload, inputDataMap)
-	for _, task := range e.State.PreviousTasks {
+	for _, task := range state.PreviousTasks {
 		for _, finishedEvent := range task.FinishedEvents {
 			mergedPayload = common.Merge(mergedPayload, finishedEvent.Data)
 		}
@@ -117,10 +126,10 @@ func (e *Engine) deriveNextEvent() (*keptnapimodels.KeptnContextExtendedCE, erro
 
 	taskProperties := map[string]interface{}{}
 
-	taskProperties[e.State.CurrentTask.TaskName] = e.State.TaskSequence.Tasks[len(e.State.PreviousTasks)].Properties // TODO: should we store the task explicitly in ts.CurrentTask?
+	taskProperties[state.CurrentTask.TaskName] = state.TaskSequence.Tasks[len(state.PreviousTasks)].Properties // TODO: should we store the task explicitly in ts.CurrentTask?
 	mergedPayload = common.Merge(mergedPayload, taskProperties)
 
-	event, _ := eventutils.KeptnEvent(keptnv2.GetTriggeredEventType(e.State.CurrentTask.TaskName), mergedPayload).
+	event, _ := eventutils.KeptnEvent(keptnv2.GetTriggeredEventType(state.CurrentTask.TaskName), mergedPayload).
 		WithID("NEW-ID").
 		Build()
 

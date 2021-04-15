@@ -20,9 +20,6 @@ import (
 // 			StoreFunc: func(stateMoqParam state.TaskSequenceExecutionState) error {
 // 				panic("mock out the Store method")
 // 			},
-// 			UpdateFunc: func(stateMoqParam state.TaskSequenceExecutionState) error {
-// 				panic("mock out the Update method")
-// 			},
 // 		}
 //
 // 		// use mockedITaskSequenceExecutionStateRepo in code that requires db.ITaskSequenceExecutionStateRepo
@@ -35,9 +32,6 @@ type ITaskSequenceExecutionStateRepoMock struct {
 
 	// StoreFunc mocks the Store method.
 	StoreFunc func(stateMoqParam state.TaskSequenceExecutionState) error
-
-	// UpdateFunc mocks the Update method.
-	UpdateFunc func(stateMoqParam state.TaskSequenceExecutionState) error
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -55,15 +49,9 @@ type ITaskSequenceExecutionStateRepoMock struct {
 			// StateMoqParam is the stateMoqParam argument value.
 			StateMoqParam state.TaskSequenceExecutionState
 		}
-		// Update holds details about calls to the Update method.
-		Update []struct {
-			// StateMoqParam is the stateMoqParam argument value.
-			StateMoqParam state.TaskSequenceExecutionState
-		}
 	}
-	lockGet    sync.RWMutex
-	lockStore  sync.RWMutex
-	lockUpdate sync.RWMutex
+	lockGet   sync.RWMutex
+	lockStore sync.RWMutex
 }
 
 // Get calls GetFunc.
@@ -133,36 +121,5 @@ func (mock *ITaskSequenceExecutionStateRepoMock) StoreCalls() []struct {
 	mock.lockStore.RLock()
 	calls = mock.calls.Store
 	mock.lockStore.RUnlock()
-	return calls
-}
-
-// Update calls UpdateFunc.
-func (mock *ITaskSequenceExecutionStateRepoMock) Update(stateMoqParam state.TaskSequenceExecutionState) error {
-	if mock.UpdateFunc == nil {
-		panic("ITaskSequenceExecutionStateRepoMock.UpdateFunc: method is nil but ITaskSequenceExecutionStateRepo.Update was just called")
-	}
-	callInfo := struct {
-		StateMoqParam state.TaskSequenceExecutionState
-	}{
-		StateMoqParam: stateMoqParam,
-	}
-	mock.lockUpdate.Lock()
-	mock.calls.Update = append(mock.calls.Update, callInfo)
-	mock.lockUpdate.Unlock()
-	return mock.UpdateFunc(stateMoqParam)
-}
-
-// UpdateCalls gets all the calls that were made to Update.
-// Check the length with:
-//     len(mockedITaskSequenceExecutionStateRepo.UpdateCalls())
-func (mock *ITaskSequenceExecutionStateRepoMock) UpdateCalls() []struct {
-	StateMoqParam state.TaskSequenceExecutionState
-} {
-	var calls []struct {
-		StateMoqParam state.TaskSequenceExecutionState
-	}
-	mock.lockUpdate.RLock()
-	calls = mock.calls.Update
-	mock.lockUpdate.RUnlock()
 	return calls
 }

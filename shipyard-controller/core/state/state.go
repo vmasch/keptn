@@ -23,6 +23,7 @@ func NewTaskSequenceExecutionState(event keptnapimodels.KeptnContextExtendedCE, 
 
 	ts := TaskSequenceExecutionState{
 		Status:          TaskSequenceTriggered,
+		KeptnContext:    event.Shkeptncontext,
 		InputEvent:      event,
 		Shipyard:        shipyard,
 		CurrentStage:    CurrentStage{StageName: shipyard.Spec.Stages[0].Name},
@@ -44,6 +45,7 @@ func NewTaskSequenceExecutionState(event keptnapimodels.KeptnContextExtendedCE, 
 
 type TaskSequenceExecutionState struct {
 	Status          TaskSequenceStatus
+	KeptnContext    string
 	InputEvent      keptnapimodels.KeptnContextExtendedCE
 	Shipyard        keptnv2.Shipyard
 	CurrentStage    CurrentStage
@@ -82,6 +84,7 @@ func DeriveNextState(state *TaskSequenceExecutionState) *TaskSequenceExecutionSt
 
 	nextState := TaskSequenceExecutionState{
 		Status:          state.Status,
+		KeptnContext:    state.KeptnContext,
 		InputEvent:      state.InputEvent,
 		Shipyard:        state.Shipyard,
 		CurrentStage:    state.CurrentStage,
@@ -94,10 +97,18 @@ func DeriveNextState(state *TaskSequenceExecutionState) *TaskSequenceExecutionSt
 	nextTask := GetNextTask(state)
 	if nextTask != nil {
 		nextState.CurrentTask = CurrentTask{TaskName: nextTask.Name, TriggeredID: state.CurrentTask.TriggeredID}
+	} else {
+		nextStage := GetNextStage(state)
+		for _, seq := range nextStage.Sequences {
+			for _, trigger := range seq.TriggeredOn {
+				if trigger.Event == state.CurrentStage.StageName+"."+state.CurrentSequence.SequenceName+".finished" {
+
+				}
+			}
+		}
+		nextState.CurrentStage = CurrentStage{StageName: nextStage.Name}
 	}
 
-	//nextStage := GetNextStage(state)
-	//nextSequence := GetNextSequence(state)
 	//if nextStage != nil && nextSequence != nil {
 	//	nextState := TaskSequenceExecutionState{
 	//		Status:          TaskSequenceTriggered,
@@ -129,23 +140,6 @@ func GetNextTask(state *TaskSequenceExecutionState) *keptnv2.Task {
 								return &seq.Tasks[i+1]
 							}
 						}
-					}
-				}
-			}
-		}
-	}
-	return nil
-}
-
-func GetNextSequence(state *TaskSequenceExecutionState) *keptnv2.Sequence {
-	shipyardSpec := state.Shipyard.Spec
-
-	for _, st := range shipyardSpec.Stages {
-		if st.Name == state.CurrentStage.StageName {
-			for i, seq := range st.Sequences {
-				if seq.Name == state.CurrentSequence.SequenceName {
-					if i+1 <= len(st.Sequences)-1 {
-						return &st.Sequences[i+1]
 					}
 				}
 			}

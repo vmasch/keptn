@@ -8,7 +8,7 @@ import (
 type ITaskSequenceExecutionStateRepo interface {
 	Store(state state.TaskSequenceExecutionState) error
 	Get(keptnContext, triggeredID, taskName string) (*state.TaskSequenceExecutionState, error)
-	GetSequence(sequenceName, stageName string) (*state.TaskSequenceExecutionState, error)
+	GetBySequence(keptnContext, sequenceName, stageName string) (*state.TaskSequenceExecutionState, error)
 }
 
 type InMemoryTaskSequenceStateRepo struct {
@@ -21,7 +21,7 @@ func NewInMemoryTaskSequenceStaeRepo() *InMemoryTaskSequenceStateRepo {
 
 func (i *InMemoryTaskSequenceStateRepo) Store(state state.TaskSequenceExecutionState) error {
 
-	key := state.CurrentSequence.SequenceName + "-" + state.CurrentStage.StageName
+	key := state.CurrentSequence.SequenceName + "-" + state.CurrentStage.StageName + "-" + state.KeptnContext
 	i.store[key] = state
 	return nil
 }
@@ -36,8 +36,8 @@ func (i *InMemoryTaskSequenceStateRepo) Get(keptnContext, triggeredID, taskName 
 
 	return nil, nil
 }
-func (i *InMemoryTaskSequenceStateRepo) GetSequence(sequenceName, stageName string) (*state.TaskSequenceExecutionState, error) {
-	key := sequenceName + "-" + stageName
+func (i *InMemoryTaskSequenceStateRepo) GetBySequence(keptnContext, sequenceName, stageName string) (*state.TaskSequenceExecutionState, error) {
+	key := sequenceName + "-" + stageName + "-" + keptnContext
 	if value, ok := i.store[key]; ok {
 		return &value, nil
 	}

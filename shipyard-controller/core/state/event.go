@@ -38,7 +38,7 @@ func DeriveNextEvent(state *TaskSequenceExecutionState) (*keptnapimodels.KeptnCo
 
 	// EVENT FOR TRIGGERING NEXT SEQUENCE
 	if state.CurrentSequence.SequenceName != "" && state.CurrentStage.StageName != "" {
-		event, _ := eventutils.KeptnEvent(keptnv2.GetTriggeredEventType(state.CurrentStage.StageName+"."+state.CurrentSequence.SequenceName), keptnv2.EventData{}).
+		event, _ := eventutils.KeptnEvent(keptnv2.GetFinishedEventType(state.CurrentStage.StageName+"."+state.CurrentSequence.SequenceName), keptnv2.EventData{}).
 			WithID("NEW-ID").
 			Build()
 

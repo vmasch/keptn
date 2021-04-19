@@ -25,8 +25,9 @@ func (e *Engine) SequenceTriggered(inEvent keptnapimodels.KeptnContextExtendedCE
 
 	stage, _ := utils.ExtractStageName(*inEvent.Type)
 	sequence, _ := utils.ExtractSequenceName(*inEvent.Type)
+	keptnContext := inEvent.Shkeptncontext
 
-	currentState, err := e.TaskSequenceRepo.GetSequence(sequence, stage)
+	currentState, err := e.TaskSequenceRepo.GetBySequence(keptnContext, sequence, stage)
 	if err != nil {
 		return err
 	}

@@ -148,6 +148,7 @@ func Test_ProcessTaskStartedAndFinishedEvent(t *testing.T) {
 		Stage:   "dev",
 		Service: "my-service"}).
 		WithID("ID1").
+		WithKeptnContext("keptn-context-123").
 		WithSource("cli").
 		Build()
 
@@ -157,6 +158,7 @@ func Test_ProcessTaskStartedAndFinishedEvent(t *testing.T) {
 		Service: "my-service"}).
 		WithID("ID2").
 		WithTriggeredID("ID1").
+		WithKeptnContext("keptn-context-123").
 		WithSource("helm-service").
 		Build()
 
@@ -166,6 +168,7 @@ func Test_ProcessTaskStartedAndFinishedEvent(t *testing.T) {
 		Service: "my-service"}).
 		WithID("ID3").
 		WithTriggeredID("ID1").
+		WithKeptnContext("keptn-context-123").
 		WithSource("helm-service").
 		Build()
 
@@ -175,6 +178,7 @@ func Test_ProcessTaskStartedAndFinishedEvent(t *testing.T) {
 		Service: "my-service"}).
 		WithID("ID4").
 		WithTriggeredID("ID1").
+		WithKeptnContext("keptn-context-123").
 		WithSource("jmeter-service").
 		Build()
 
@@ -184,6 +188,7 @@ func Test_ProcessTaskStartedAndFinishedEvent(t *testing.T) {
 		Service: "my-service"}).
 		WithID("ID5").
 		WithTriggeredID("ID1").
+		WithKeptnContext("keptn-context-123").
 		WithSource("jmeter-service").
 		Build()
 
@@ -192,6 +197,7 @@ func Test_ProcessTaskStartedAndFinishedEvent(t *testing.T) {
 		Stage:   "staging",
 		Service: "my-service"}).
 		WithID("ID6").
+		WithKeptnContext("keptn-context-123").
 		WithSource("shipyard-controller").
 		Build()
 

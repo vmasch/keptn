@@ -10,6 +10,7 @@ import (
 	"github.com/keptn/keptn/shipyard-controller/core/engine"
 	fake2 "github.com/keptn/keptn/shipyard-controller/core/engine/fake"
 	"github.com/keptn/keptn/shipyard-controller/core/state"
+	"strings"
 	"testing"
 )
 
@@ -29,20 +30,47 @@ spec:
             - name: "test"
               properties:
                 teststrategy: "functional"
-            - name: "evaluation"
-            - name: "release"
         - name: "delivery-direct"
           tasks:
             - name: "deployment"
               properties:
                 deploymentstrategy: "direct"
-            - name: "release"`
+            - name: "release"
+    - name: "staging"
+      sequences:
+        - name: "delivery"
+          triggeredOn:
+            - event: "dev.delivery.finished"
+          tasks:
+            - name: "deployment"
+              properties:
+                deploymentstrategy: "blue_green_service"
+            - name: "test"
+              properties:
+                teststrategy: "performance"
+            - name: "evaluation"
+            - name: "release"
+      
+
+`
 
 func getFakeShipyardRepo(shipyardContent string) *fake2.IShipyardRepoMock {
 	return &fake2.IShipyardRepoMock{
 		GetTaskSequenceFunc: func(eventType string) (*keptnv2.Sequence, error) {
-			seq := getDeliveryTaskSequence()
-			return &seq, nil
+			stageName := strings.Split(eventType, ".")[3]
+			sequenceName := strings.Split(eventType, ".")[4]
+
+			shipyard, _ := keptnv2.DecodeShipyardYAML([]byte(shipyardContent))
+			for _, s := range shipyard.Spec.Stages {
+				if s.Name == stageName {
+					for _, seq := range s.Sequences {
+						if seq.Name == sequenceName {
+							return &seq, nil
+						}
+					}
+				}
+			}
+			return nil, nil
 		},
 		SyncFunc: func(project string) (*keptnv2.Shipyard, error) {
 			return keptnv2.DecodeShipyardYAML([]byte(shipyardContent))
@@ -115,7 +143,7 @@ func Test_ProcessTaskStartedAndFinishedEvent(t *testing.T) {
 		StateRepo: stateRepo,
 	}
 
-	sequenceTriggeredEvent, _ := eventutils.KeptnEvent(keptnv2.GetTriggeredEventType("deployment"), keptnv2.EventData{
+	sequenceTriggeredEvent, _ := eventutils.KeptnEvent(keptnv2.GetTriggeredEventType("dev.delivery"), keptnv2.EventData{
 		Project: "my-project",
 		Stage:   "my-stage",
 		Service: "my-service"}).
@@ -123,7 +151,7 @@ func Test_ProcessTaskStartedAndFinishedEvent(t *testing.T) {
 		WithSource("cli").
 		Build()
 
-	taskStartedEvent, _ := eventutils.KeptnEvent(keptnv2.GetStartedEventType("deployment"), keptnv2.EventData{
+	taskDeploymentStartedEvent, _ := eventutils.KeptnEvent(keptnv2.GetStartedEventType("deployment"), keptnv2.EventData{
 		Project: "my-project",
 		Stage:   "my-stage",
 		Service: "my-service"}).
@@ -132,7 +160,7 @@ func Test_ProcessTaskStartedAndFinishedEvent(t *testing.T) {
 		WithSource("helm-service").
 		Build()
 
-	taskFinishedEvent, _ := eventutils.KeptnEvent(keptnv2.GetFinishedEventType("deployment"), keptnv2.EventData{
+	taskDeploymentFinishedEvent, _ := eventutils.KeptnEvent(keptnv2.GetFinishedEventType("deployment"), keptnv2.EventData{
 		Project: "my-project",
 		Stage:   "my-stage",
 		Service: "my-service"}).
@@ -141,9 +169,29 @@ func Test_ProcessTaskStartedAndFinishedEvent(t *testing.T) {
 		WithSource("helm-service").
 		Build()
 
+	taskTestStartedEvent, _ := eventutils.KeptnEvent(keptnv2.GetStartedEventType("test"), keptnv2.EventData{
+		Project: "my-project",
+		Stage:   "my-stage",
+		Service: "my-service"}).
+		WithID("ID4").
+		WithTriggeredID("ID1").
+		WithSource("jmeter-service").
+		Build()
+
+	taskTestFinishedEvent, _ := eventutils.KeptnEvent(keptnv2.GetFinishedEventType("test"), keptnv2.EventData{
+		Project: "my-project",
+		Stage:   "my-stage",
+		Service: "my-service"}).
+		WithID("ID5").
+		WithTriggeredID("ID1").
+		WithSource("jmeter-service").
+		Build()
+
 	engineTester.NewSequenceTriggeredEvent(sequenceTriggeredEvent)
-	engineTester.NewTaskStartedEvent(taskStartedEvent)
-	engineTester.NewTaskFinishedEvent(taskFinishedEvent)
+	engineTester.NewTaskStartedEvent(taskDeploymentStartedEvent)
+	engineTester.NewTaskFinishedEvent(taskDeploymentFinishedEvent)
+	engineTester.NewTaskStartedEvent(taskTestStartedEvent)
+	engineTester.NewTaskFinishedEvent(taskTestFinishedEvent)
 
 }
 

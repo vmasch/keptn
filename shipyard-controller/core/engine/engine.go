@@ -3,11 +3,11 @@ package engine
 import (
 	"fmt"
 	keptnapimodels "github.com/keptn/go-utils/pkg/api/models"
-	"github.com/keptn/go-utils/pkg/common/eventutils"
 	keptnv2 "github.com/keptn/go-utils/pkg/lib/v0_2_0"
-	"github.com/keptn/keptn/shipyard-controller/common"
 	"github.com/keptn/keptn/shipyard-controller/core/db"
 	"github.com/keptn/keptn/shipyard-controller/core/state"
+	"github.com/keptn/keptn/shipyard-controller/core/utils"
+	"log"
 	"time"
 )
 
@@ -44,21 +44,22 @@ func (e *Engine) SequenceTriggered(inEvent keptnapimodels.KeptnContextExtendedCE
 		return err
 	}
 
-	outEvent, err := e.deriveNextEvent(newState)
+	nextEvent, err := state.DeriveNextEvent(newState)
 	if err != nil {
 		return err
 	}
 
-	_ = outEvent
+	log.Println("NEXT EVENT TO SEND: " + *nextEvent.Type)
 
 	return nil
 }
 
 func (e *Engine) TaskStarted(event keptnapimodels.KeptnContextExtendedCE) error {
-	taskName, err := ExtractTaskName(*event.Type)
+	taskName, err := utils.ExtractTaskName(*event.Type)
 	if err != nil {
 		return err
 	}
+
 	if event.Source == nil {
 		return fmt.Errorf("event has no source")
 	}
@@ -69,10 +70,10 @@ func (e *Engine) TaskStarted(event keptnapimodels.KeptnContextExtendedCE) error 
 	}
 
 	// update list of tasks
-	if _, ok := currentState.Tasks[taskName]; ok {
-		currentState.Tasks[taskName] = append(currentState.Tasks[taskName], state.TaskExecutor{})
+	if _, ok := currentState.TaskExecutors[taskName]; ok {
+		currentState.TaskExecutors[taskName] = append(currentState.TaskExecutors[taskName], state.TaskExecutor{})
 	} else {
-		currentState.Tasks[taskName] = []state.TaskExecutor{{ExecutorName: *event.Source, TaskName: taskName}}
+		currentState.TaskExecutors[taskName] = []state.TaskExecutor{{ExecutorName: *event.Source, TaskName: taskName}}
 	}
 
 	err = e.TaskSequenceRepo.Store(*currentState)
@@ -85,53 +86,29 @@ func (e *Engine) TaskStarted(event keptnapimodels.KeptnContextExtendedCE) error 
 
 func (e *Engine) TaskFinished(event keptnapimodels.KeptnContextExtendedCE) error {
 
-	taskName, err := ExtractTaskName(*event.Type)
+	finishedTaskName, err := utils.ExtractTaskName(*event.Type)
 	if err != nil {
 		return err
 	}
 
-	currentState, err := e.TaskSequenceRepo.Get(event.Shkeptncontext, "", taskName)
+	currentState, err := e.TaskSequenceRepo.Get(event.Shkeptncontext, "", finishedTaskName)
 	if err != nil {
 		return err
 	}
-
-	// TODO: update currentState.Tasks accordingly
 	_ = currentState
 
-	nextEvent, err := e.deriveNextEvent(currentState)
+	// TODO: update currentState.TaskExecutors accordingly
+
+	nextState := state.DeriveNextState(currentState)
+
+	nextEvent, err := state.DeriveNextEvent(nextState)
 	if err != nil {
 		return err
 	}
 
-	_ = nextEvent
+	e.TaskSequenceRepo.Store(*nextState)
 
-	e.TaskSequenceRepo.Store(*currentState)
+	log.Println("NEXT EVENT TO SEND: " + *nextEvent.Type)
 
 	return nil
-}
-
-func (e *Engine) deriveNextEvent(state *state.TaskSequenceExecutionState) (*keptnapimodels.KeptnContextExtendedCE, error) {
-	// merge inputEvent, previous finished events and properties of next task
-	var mergedPayload interface{}
-	inputDataMap := map[string]interface{}{}
-	if err := keptnv2.Decode(state.InputEvent.Data, &inputDataMap); err != nil {
-		return nil, err
-	}
-	mergedPayload = common.Merge(mergedPayload, inputDataMap)
-	for _, task := range state.PreviousTasks {
-		for _, finishedEvent := range task.FinishedEvents {
-			mergedPayload = common.Merge(mergedPayload, finishedEvent.Data)
-		}
-	}
-
-	taskProperties := map[string]interface{}{}
-
-	taskProperties[state.CurrentTask.TaskName] = state.TaskSequence.Tasks[len(state.PreviousTasks)].Properties // TODO: should we store the task explicitly in ts.CurrentTask?
-	mergedPayload = common.Merge(mergedPayload, taskProperties)
-
-	event, _ := eventutils.KeptnEvent(keptnv2.GetTriggeredEventType(state.CurrentTask.TaskName), mergedPayload).
-		WithID("NEW-ID").
-		Build()
-
-	return &event, nil
 }

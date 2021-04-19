@@ -35,7 +35,7 @@ func NewTaskSequenceExecutionState(event keptnapimodels.KeptnContextExtendedCE, 
 	if len(sequence.Tasks) > 0 {
 		ts.CurrentTask = CurrentTask{
 			TaskName:    sequence.Tasks[0].Name,
-			TriggeredID: "NEW_ID",
+			TriggeredID: event.ID,
 		}
 	}
 
@@ -79,43 +79,44 @@ type TaskExecutor struct {
 }
 
 func DeriveNextState(state *TaskSequenceExecutionState) *TaskSequenceExecutionState {
-	nextTask := getNextTask(state)
 
+	nextState := TaskSequenceExecutionState{
+		Status:          state.Status,
+		InputEvent:      state.InputEvent,
+		Shipyard:        state.Shipyard,
+		CurrentStage:    state.CurrentStage,
+		CurrentSequence: state.CurrentSequence,
+		CurrentTask:     CurrentTask{},
+		PreviousTasks:   state.PreviousTasks,
+		TaskExecutors:   state.TaskExecutors,
+	}
+
+	nextTask := GetNextTask(state)
 	if nextTask != nil {
-		nextState := TaskSequenceExecutionState{
-			Status:          state.Status,
-			InputEvent:      state.InputEvent,
-			Shipyard:        state.Shipyard,
-			CurrentStage:    state.CurrentStage,
-			CurrentSequence: state.CurrentSequence,
-			CurrentTask:     CurrentTask{TaskName: nextTask.Name},
-			PreviousTasks:   state.PreviousTasks,
-			TaskExecutors:   state.TaskExecutors,
-		}
-		return &nextState
+		nextState.CurrentTask = CurrentTask{TaskName: nextTask.Name, TriggeredID: state.CurrentTask.TriggeredID}
 	}
 
-	nextStage := getNextStage(state)
-	nextSequence := getNextSequence(state)
-	if nextStage != nil && nextSequence != nil {
-		nextState := TaskSequenceExecutionState{
-			Status:          TaskSequenceTriggered,
-			InputEvent:      state.InputEvent,
-			Shipyard:        state.Shipyard,
-			CurrentStage:    CurrentStage{StageName: nextStage.Name},
-			CurrentSequence: CurrentSequence{SequenceName: nextSequence.Name},
-			CurrentTask:     CurrentTask{},
-			PreviousTasks:   []TaskResult{},
-			TaskExecutors:   map[string][]TaskExecutor{},
-		}
-
-		return &nextState
-	}
-	return nil
+	//nextStage := GetNextStage(state)
+	//nextSequence := GetNextSequence(state)
+	//if nextStage != nil && nextSequence != nil {
+	//	nextState := TaskSequenceExecutionState{
+	//		Status:          TaskSequenceTriggered,
+	//		InputEvent:      state.InputEvent,
+	//		Shipyard:        state.Shipyard,
+	//		CurrentStage:    CurrentStage{StageName: nextStage.Name},
+	//		CurrentSequence: CurrentSequence{SequenceName: nextSequence.Name},
+	//		CurrentTask:     CurrentTask{},
+	//		PreviousTasks:   []TaskResult{},
+	//		TaskExecutors:   map[string][]TaskExecutor{},
+	//	}
+	//
+	//	return &nextState
+	//}
+	return &nextState
 
 }
 
-func getNextTask(state *TaskSequenceExecutionState) *keptnv2.Task {
+func GetNextTask(state *TaskSequenceExecutionState) *keptnv2.Task {
 	shipyardSpec := state.Shipyard.Spec
 
 	for _, st := range shipyardSpec.Stages {
@@ -136,7 +137,7 @@ func getNextTask(state *TaskSequenceExecutionState) *keptnv2.Task {
 	return nil
 }
 
-func getNextSequence(state *TaskSequenceExecutionState) *keptnv2.Sequence {
+func GetNextSequence(state *TaskSequenceExecutionState) *keptnv2.Sequence {
 	shipyardSpec := state.Shipyard.Spec
 
 	for _, st := range shipyardSpec.Stages {
@@ -153,7 +154,7 @@ func getNextSequence(state *TaskSequenceExecutionState) *keptnv2.Sequence {
 	return nil
 }
 
-func getNextStage(state *TaskSequenceExecutionState) *keptnv2.Stage {
+func GetNextStage(state *TaskSequenceExecutionState) *keptnv2.Stage {
 	shipyardSpec := state.Shipyard.Spec
 
 	for i, st := range shipyardSpec.Stages {

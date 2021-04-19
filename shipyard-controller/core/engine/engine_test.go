@@ -130,7 +130,7 @@ func getEventWithPayload(eventType string, data map[string]interface{}) models.K
 
 func Test_ProcessTaskStartedAndFinishedEvent(t *testing.T) {
 
-	stateRepo := &db.InMemoryTaskSequenceStateRepo{}
+	stateRepo := db.NewInMemoryTaskSequenceStaeRepo()
 	shipyardRepo := getFakeShipyardRepo(simpleShipyard)
 
 	engine := engine.Engine{
@@ -145,7 +145,7 @@ func Test_ProcessTaskStartedAndFinishedEvent(t *testing.T) {
 
 	sequenceTriggeredEvent, _ := eventutils.KeptnEvent(keptnv2.GetTriggeredEventType("dev.delivery"), keptnv2.EventData{
 		Project: "my-project",
-		Stage:   "my-stage",
+		Stage:   "dev",
 		Service: "my-service"}).
 		WithID("ID1").
 		WithSource("cli").
@@ -153,7 +153,7 @@ func Test_ProcessTaskStartedAndFinishedEvent(t *testing.T) {
 
 	taskDeploymentStartedEvent, _ := eventutils.KeptnEvent(keptnv2.GetStartedEventType("deployment"), keptnv2.EventData{
 		Project: "my-project",
-		Stage:   "my-stage",
+		Stage:   "dev",
 		Service: "my-service"}).
 		WithID("ID2").
 		WithTriggeredID("ID1").
@@ -162,7 +162,7 @@ func Test_ProcessTaskStartedAndFinishedEvent(t *testing.T) {
 
 	taskDeploymentFinishedEvent, _ := eventutils.KeptnEvent(keptnv2.GetFinishedEventType("deployment"), keptnv2.EventData{
 		Project: "my-project",
-		Stage:   "my-stage",
+		Stage:   "dev",
 		Service: "my-service"}).
 		WithID("ID3").
 		WithTriggeredID("ID1").
@@ -171,7 +171,7 @@ func Test_ProcessTaskStartedAndFinishedEvent(t *testing.T) {
 
 	taskTestStartedEvent, _ := eventutils.KeptnEvent(keptnv2.GetStartedEventType("test"), keptnv2.EventData{
 		Project: "my-project",
-		Stage:   "my-stage",
+		Stage:   "dev",
 		Service: "my-service"}).
 		WithID("ID4").
 		WithTriggeredID("ID1").
@@ -180,11 +180,19 @@ func Test_ProcessTaskStartedAndFinishedEvent(t *testing.T) {
 
 	taskTestFinishedEvent, _ := eventutils.KeptnEvent(keptnv2.GetFinishedEventType("test"), keptnv2.EventData{
 		Project: "my-project",
-		Stage:   "my-stage",
+		Stage:   "dev",
 		Service: "my-service"}).
 		WithID("ID5").
 		WithTriggeredID("ID1").
 		WithSource("jmeter-service").
+		Build()
+
+	nextSequenceTriggeredEvent, _ := eventutils.KeptnEvent(keptnv2.GetTriggeredEventType("staging.delivery"), keptnv2.EventData{
+		Project: "my-project",
+		Stage:   "staging",
+		Service: "my-service"}).
+		WithID("ID6").
+		WithSource("shipyard-controller").
 		Build()
 
 	engineTester.NewSequenceTriggeredEvent(sequenceTriggeredEvent)
@@ -192,6 +200,7 @@ func Test_ProcessTaskStartedAndFinishedEvent(t *testing.T) {
 	engineTester.NewTaskFinishedEvent(taskDeploymentFinishedEvent)
 	engineTester.NewTaskStartedEvent(taskTestStartedEvent)
 	engineTester.NewTaskFinishedEvent(taskTestFinishedEvent)
+	engineTester.NewSequenceTriggeredEvent(nextSequenceTriggeredEvent)
 
 }
 

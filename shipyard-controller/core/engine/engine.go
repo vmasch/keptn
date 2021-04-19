@@ -12,7 +12,6 @@ import (
 )
 
 type Engine struct {
-	//State            *state.TaskSequenceExecutionState
 	TaskSequenceRepo db.ITaskSequenceExecutionStateRepo
 	ShipyardRepo     IShipyardRepo
 	Clock            time.Time
@@ -24,27 +23,36 @@ func (e *Engine) SequenceTriggered(inEvent keptnapimodels.KeptnContextExtendedCE
 		return err
 	}
 
-	// sync with current shipyard
-	shipyard, err := e.ShipyardRepo.Sync(eventScope.GetProject())
+	stage, _ := utils.ExtractStageName(*inEvent.Type)
+	sequence, _ := utils.ExtractSequenceName(*inEvent.Type)
+
+	currentState, err := e.TaskSequenceRepo.GetSequence(sequence, stage)
 	if err != nil {
 		return err
 	}
+	if currentState == nil {
 
-	// get task sequence for event
-	taskSequence, err := e.ShipyardRepo.GetTaskSequence(*inEvent.Type)
-	if err != nil {
-		return err
+		// sync with current shipyard
+		shipyard, err := e.ShipyardRepo.Sync(eventScope.GetProject())
+		if err != nil {
+			return err
+		}
+
+		// get task sequence for event
+		taskSequence, err := e.ShipyardRepo.GetTaskSequence(*inEvent.Type)
+		if err != nil {
+			return err
+		}
+
+		currentState = state.NewTaskSequenceExecutionState(inEvent, *shipyard, *taskSequence)
 	}
-
-	// set new state
-	newState := state.NewTaskSequenceExecutionState(inEvent, *shipyard, *taskSequence)
 
 	// persist state
-	if err := e.TaskSequenceRepo.Store(*newState); err != nil {
+	if err := e.TaskSequenceRepo.Store(*currentState); err != nil {
 		return err
 	}
 
-	nextEvent, err := state.DeriveNextEvent(newState)
+	nextEvent, err := state.DeriveNextEvent(currentState)
 	if err != nil {
 		return err
 	}
@@ -91,7 +99,7 @@ func (e *Engine) TaskFinished(event keptnapimodels.KeptnContextExtendedCE) error
 		return err
 	}
 
-	currentState, err := e.TaskSequenceRepo.Get(event.Shkeptncontext, "", finishedTaskName)
+	currentState, err := e.TaskSequenceRepo.Get(event.Shkeptncontext, event.Triggeredid, finishedTaskName)
 	if err != nil {
 		return err
 	}

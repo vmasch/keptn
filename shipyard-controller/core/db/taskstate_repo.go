@@ -1,7 +1,6 @@
 package db
 
 import (
-	"fmt"
 	"github.com/keptn/keptn/shipyard-controller/core/state"
 )
 
@@ -9,26 +8,39 @@ import (
 type ITaskSequenceExecutionStateRepo interface {
 	Store(state state.TaskSequenceExecutionState) error
 	Get(keptnContext, triggeredID, taskName string) (*state.TaskSequenceExecutionState, error)
+	GetSequence(sequenceName, stageName string) (*state.TaskSequenceExecutionState, error)
 }
 
 type InMemoryTaskSequenceStateRepo struct {
-	store []state.TaskSequenceExecutionState
+	store map[string]state.TaskSequenceExecutionState
+}
+
+func NewInMemoryTaskSequenceStaeRepo() *InMemoryTaskSequenceStateRepo {
+	return &InMemoryTaskSequenceStateRepo{store: map[string]state.TaskSequenceExecutionState{}}
 }
 
 func (i *InMemoryTaskSequenceStateRepo) Store(state state.TaskSequenceExecutionState) error {
-	i.store = append(i.store, state)
+
+	key := state.CurrentSequence.SequenceName + "-" + state.CurrentStage.StageName
+	i.store[key] = state
 	return nil
 }
 
 func (i *InMemoryTaskSequenceStateRepo) Get(keptnContext, triggeredID, taskName string) (*state.TaskSequenceExecutionState, error) {
-	for _, el := range i.store {
-		if el.CurrentTask.TaskName == taskName {
-			return &el, nil
+
+	for _, v := range i.store {
+		if v.CurrentTask.TaskName == taskName && v.CurrentTask.TriggeredID == triggeredID {
+			return &v, nil
 		}
 	}
-	return nil, fmt.Errorf("not found")
-}
 
-func (i *InMemoryTaskSequenceStateRepo) Update(state state.TaskSequenceExecutionState) error {
-	panic("implement me")
+	return nil, nil
+}
+func (i *InMemoryTaskSequenceStateRepo) GetSequence(sequenceName, stageName string) (*state.TaskSequenceExecutionState, error) {
+	key := sequenceName + "-" + stageName
+	if value, ok := i.store[key]; ok {
+		return &value, nil
+	}
+
+	return nil, nil
 }

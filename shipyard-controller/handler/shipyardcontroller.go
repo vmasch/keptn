@@ -35,6 +35,7 @@ type shipyardController struct {
 	taskSequenceRepo   db.TaskSequenceRepo
 	eventsDbOperations db.EventsDbOperations
 	logger             *keptncommon.Logger
+	preSendTaskHooks   []IPreSendTask
 }
 
 func GetShipyardControllerInstance() *shipyardController {
@@ -48,6 +49,9 @@ func GetShipyardControllerInstance() *shipyardController {
 				ProjectRepo:     &db.MongoDBProjectsRepo{Logger: logger},
 				EventsRetriever: &db.MongoDBEventsRepo{Logger: logger},
 				Logger:          logger,
+			},
+			preSendTaskHooks: []IPreSendTask{
+				&TaskDelay{},
 			},
 			logger: logger,
 		}
@@ -448,6 +452,12 @@ func (sc *shipyardController) proceedTaskSequence(eventScope *keptnv2.EventData,
 		sc.logger.Error("Could not get next task of sequence: " + err.Error())
 		return err
 	}
+
+	for _, hook := range sc.preSendTaskHooks {
+		if err := hook.Execute(*task); err != nil {
+			return err
+		}
+	}
 	return sc.sendTaskTriggeredEvent(event.Shkeptncontext, eventScope, taskSequence.Name, *task, eventHistory)
 }
 
@@ -726,15 +736,8 @@ func (sc *shipyardController) sendTaskTriggeredEvent(keptnContext string, eventS
 	// make sure the 'message' property from the previous event is set to ""
 	eventPayload["message"] = ""
 
-	source, _ := url.Parse("shipyard-controller")
-
-	event := cloudevents.NewEvent()
+	event := common.CreateEventWithPayload(keptnContext, "", keptnv2.GetTriggeredEventType(task.Name), eventPayload)
 	event.SetID(uuid.New().String())
-	event.SetType(keptnv2.GetTriggeredEventType(task.Name))
-	event.SetSource(source.String())
-	event.SetDataContentType(cloudevents.ApplicationJSON)
-	event.SetExtension("shkeptncontext", keptnContext)
-	event.SetData(cloudevents.ApplicationJSON, eventPayload)
 
 	marshal, err := json.Marshal(event)
 

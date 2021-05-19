@@ -450,7 +450,7 @@ jobs:
         continue-on-error: true
         env:
           KEPTN_ENDPOINT: ${{ steps.authenticate_keptn_cli.outputs.KEPTN_ENDPOINT }}
-          UNLEASH_SERVICE_VERSION: "release-0.3.0"
+          UNLEASH_SERVICE_VERSION: "release-0.3.1"
         run: test/test_self_healing.sh
 
       - name: Test Delivery Assistant
